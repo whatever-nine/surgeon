@@ -311,7 +311,7 @@ module.exports = function Surgeon(dispatch) {
 					if (previewspawn !== stack) {
 						PreviewAppearance(stack - 1)
 						command.message('Previewing the preset. Please use the same command again to confirm.')
-					else {
+					} else {
 						customApp.characters[player] = stack
 						saveCustom()
 						command.message('Settings changed. Please relog to load the custom appearance.')
