@@ -308,7 +308,7 @@ module.exports = function Surgeon(dispatch) {
 				} else if (stack > customApp.presets.length) {
 					command.message('Invalid Preset. Does not exist.')
 				} else {
-					if (previewspawn !== stack) {
+					if (previewspawn !== (stack - 1)) {
 						PreviewAppearance(stack - 1)
 						command.message('Previewing the preset. Please use the same command again to confirm.')
 					} else {
