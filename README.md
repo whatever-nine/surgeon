@@ -1,4 +1,6 @@
 
+NOTICE: Not working in Male Human Brawler patch. Please wait until the proxy devs revised the required packets.
+
 ## Surgeon  
 A tera-proxy module that is able to change your character's appearance (race, gender, face slider and voice).  
 
