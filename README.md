@@ -20,7 +20,8 @@ This serves as the script's command interface.
 The following commands are supported:  
 
 * relog [name] - Relogs the name specified. Do not touch anything until the module logs in for you
-  
+* relog [number] - Relog to the n-th character from your selection list.
+* relog nx - relog to the next character in your list.
 * surgeon load [x] - preview/load the preset with the number x
 * surgeon race - emulates a race change. Can only be used while in Celestial Arena.
 * surgeon gender - emulates a gender change. Can only be used while in Celestial Arena.
