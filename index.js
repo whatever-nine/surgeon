@@ -7,7 +7,7 @@ const CELESTIAL_ARENA_ID = 9830
 module.exports = function Surgeon(dispatch) {
 	const command = Command(dispatch)
 	    
-	let guid = null,
+	let gameId = null,
 		player = '',
 		templateId = -1,
 		previewspawn = -1,
@@ -20,10 +20,10 @@ module.exports = function Surgeon(dispatch) {
 		shapeid = -1,
 		stack = -1,
 		zone = 0,
-		px,
-		pw,
-		py,
-		pz
+		ploc,
+		positions = {},
+		curr_char = -1,
+		pw
         
     let customApp = {}
     
@@ -36,7 +36,7 @@ module.exports = function Surgeon(dispatch) {
 	// ### Magic ### //
 	// ############# //
 		
-	dispatch.hook('S_LOGIN', 7, event => {
+	dispatch.hook('S_LOGIN', 9, event => {
 		player = event.name
 		loginjob = event.templateId % 100 - 1
 		checkMeincustomApp(player)
@@ -45,9 +45,9 @@ module.exports = function Surgeon(dispatch) {
 			let fix = fixModel(currpreset.race, currpreset.gender, loginjob)
             event.appearance = currpreset.app
             event.templateId = fix[3]
-			event.details = getBuffer(currpreset.details.data)
+			event.details = getBuffer(currpreset.details)
         }
-		({guid, templateId} = event)
+		({gameId, templateId} = event)
 		logininfo = event
 		loginrace = Math.floor((templateId - 10101) / 200) // 0 Human, 1 High Elf, 2 Aman, 3 Castanic, 4 Popori/Elin, 5 Baraka
 		logingender = Math.floor((templateId - 10101) / 100) % 2 // 0 male, 1 female
@@ -60,7 +60,7 @@ module.exports = function Surgeon(dispatch) {
 	})
 	
 	//order is -1 for costume-ex compatibility
-	dispatch.hook('S_GET_USER_LIST', 11, { order: -1 }, (event) => {
+	dispatch.hook('S_GET_USER_LIST', 12, { order: -1 }, (event) => {
         for (let indexx in event.characters) {
 			let charname = event.characters[indexx].name
 			checkMeincustomApp(charname)
@@ -70,7 +70,7 @@ module.exports = function Surgeon(dispatch) {
 				event.characters[indexx].race = fix[0]
 				event.characters[indexx].gender = fix[1]
 				event.characters[indexx].appearance = currpreset.app
-				event.characters[indexx].details = getBuffer(currpreset.details.data)
+				event.characters[indexx].details = getBuffer(currpreset.details)
 			}
 		}
 		return true
@@ -88,7 +88,7 @@ module.exports = function Surgeon(dispatch) {
 				ok: 0,
 				unk: 0
 			})
-			ToLobby()
+			relogByName(player)
 			return false
 		}
 	})
@@ -106,27 +106,23 @@ module.exports = function Surgeon(dispatch) {
 					race: event.race,
 					gender: event.gender,
 					app: event.appearance,
-					details: strBuffer(event.details)
+					details: event.details.toString('hex')
 				})
 				customApp.characters[player] = customApp.presets.length
 			} else {
 				customApp.presets[customApp.characters[player] - 1].race = event.race
 				customApp.presets[customApp.characters[player] - 1].gender = event.gender
 				customApp.presets[customApp.characters[player] - 1].app = event.appearance
-				customApp.presets[customApp.characters[player] - 1].details = strBuffer(event.details)
+				customApp.presets[customApp.characters[player] - 1].details = event.details.toString('hex')
 			}
-            saveCustom();
-            
-			ToLobby()
+            saveCustom(); relogByName(player)
 			return false
 		}
 	})
 	
-	dispatch.hook('C_PLAYER_LOCATION', 1, event =>{
-		pw = event.w;
-		px = event.x1;
-		py = event.y1;
-		pz = event.z1;
+	dispatch.hook('C_PLAYER_LOCATION', 3, event =>{
+		ploc = event.loc
+		pw = event.w
 	});
 	
 	// ######################## //
@@ -135,16 +131,12 @@ module.exports = function Surgeon(dispatch) {
 	
 	function getBuffer(a) {
 		let retbuffer = 0
-		if (a && Array.isArray(a)) {
-			retbuffer = Buffer.from(a)
+		if (a && a.data) {
+			retbuffer = Buffer.from(a.data)
+		} else if (a && typeof a === 'string') {
+			retbuffer = Buffer.from(a, 'hex')
 		}
 		return retbuffer
-	}
-	
-	function strBuffer(bf) {
-		let bfstr = JSON.stringify(bf)
-		let retobj = JSON.parse(bfstr)
-		return retobj
 	}
 	
 	function SurgeonRoom(room, itemid) {
@@ -263,19 +255,17 @@ module.exports = function Surgeon(dispatch) {
 		let currpreset = customApp.presets[index]
 		let fix = fixModel(currpreset.race, currpreset.gender, loginjob)
 		if (previewspawn > -1) DespawnPreview()
-		dispatch.toClient('S_SPAWN_USER', 11, {
+		dispatch.toClient('S_SPAWN_USER', 12, {
 			serverId: logininfo.serverId,
 			playerId: logininfo.playerId,
 			gameId: 66666666666666,
-			x: px,
-			y: py,
-			z: pz,
+			loc: ploc,
 			w: pw,
 			relation: 1,
 			templateId: fix[3],
 			visible: 1,
 			alive: 1,
-			appearance: logininfo.appearance,
+			appearance: currpreset.app,
 			spawnFx: 0,
 			pose: 7,
 			body: logininfo.body,
@@ -287,7 +277,7 @@ module.exports = function Surgeon(dispatch) {
 			showFace: logininfo.showFace,
 			showStyle: 0,
 			name: 'Surgeon Preset '+(index+1)+'',
-			details: getBuffer(currpreset.details.data)
+			details: getBuffer(currpreset.details)
 		})
 		previewspawn = index
 	}
@@ -296,6 +286,9 @@ module.exports = function Surgeon(dispatch) {
 	// ### Chat Hook ### //
 	// ################# //
 	
+	command.add('relog', (name) => {
+		relogByName(name)
+	})
 	
 	command.add('surgeon', (param, number, num2) => {
 		switch (param) {
@@ -320,13 +313,13 @@ module.exports = function Surgeon(dispatch) {
 				break
 		case 'race': newpreset = false; SurgeonRoom(1, 168011); break
 		case 'gender': newpreset = false; SurgeonRoom(2, 168012); break
-		case 'appearance': newpreset = false; SurgeonRoom(3, 168013); break
+		case 'face': newpreset = false; SurgeonRoom(3, 168013); break
 		case 'new':
 			newpreset = true
 			switch (number) {
 				case 'race': SurgeonRoom(1, 168011); break
 				case 'gender': SurgeonRoom(2, 168012); break
-				case 'appearance': SurgeonRoom(3, 168013); break
+				case 'face': SurgeonRoom(3, 168013); break
 			}
 			break
 		case 'voice': voiceChange((number == null ? 0 : Number(number))); break
@@ -348,10 +341,96 @@ module.exports = function Surgeon(dispatch) {
 		fs.writeFileSync(path.join(__dirname, 'app.json'), JSON.stringify(customApp))
 	}
 	
-	//just return to lobby...
+	// ################# //
+	// ### Relog     ### //
+	// ################# //
 	
-	function ToLobby() {
-		dispatch.toServer('C_RETURN_TO_LOBBY', 1, {});
+	function relogByName(name) {
+		if (!name) return
+		getCharacterId(name)
+		  .then(relog)
+		  .catch(e => console.error(e.message))
 	}
+	
+  // Grab the user list the first time the client sees the lobby
+  dispatch.hookOnce('S_GET_USER_LIST', 12, event => updatePositions(event.characters))
+
+  dispatch.hook('C_DELETE_USER', 'raw', () =>
+    dispatch.hookOnce('S_GET_USER_LIST', 12, event => updatePositions(event.characters))
+  )
+
+  // Update positions on reorder
+  dispatch.hook('C_CHANGE_USER_LOBBY_SLOT_ID', event => {
+    updatePositions(event.characters)
+  })
+
+  // Keep track of current char for relog nx
+  dispatch.hook('C_SELECT_USER', 1, /*{order: 100, filter: {fake: null}},*/ event => {
+    curr_char = positions[event.id]
+  })
+
+  function updatePositions(characters) {
+    if (!characters) return
+    positions = {}
+    characters.forEach((char, i) => {
+      let {id, position} = char
+      positions[id] = position || (i+1)
+    })
+  }
+
+  function getCharacterId(name) {
+    return new Promise((resolve, reject) => {
+      // request handler, resolves with character's playerId
+      const userListHook = dispatch.hookOnce('S_GET_USER_LIST', 12, event => {
+        name = name.toLowerCase()
+        let index = (name === 'nx')? ++curr_char : parseInt(name)
+        if (index && index > event.characters.length) index = 1
+        event.characters.forEach((char, i) => {
+          if (char.deletion) return
+          let pos = char.position || (i+1)
+          if (char.name.toLowerCase() === name || pos === index) resolve(char.id)
+        })
+        reject(new Error(`[relog] character "${name}" not found`))
+      })
+
+      // set a timeout for the request, in case something went wrong
+      setTimeout(() => {
+        if (userListHook) dispatch.unhook(userListHook)
+        reject(new Error('[relog] C_GET_USER_LIST request timed out'))
+      }, 5000)
+
+      // request the character list
+      dispatch.toServer('C_GET_USER_LIST', 1, {})
+    })
+  }
+
+  function relog(targetId) {
+    if (!targetId) return
+    dispatch.toServer('C_RETURN_TO_LOBBY', 1, {})
+    let userListHook
+    let lobbyHook
+
+    // make sure that the client is able to log out
+    const prepareLobbyHook = dispatch.hookOnce('S_PREPARE_RETURN_TO_LOBBY', 1, () => {
+      dispatch.toClient('S_RETURN_TO_LOBBY', 1, {})
+
+      // the server is not ready yet, displaying "Loading..." as char names
+      userListHook = dispatch.hookOnce('S_GET_USER_LIST', 12, event => {
+        event.characters.forEach(char => char.name = 'Loading...')
+        return true
+      })
+
+      // the server is ready to relog to a new character
+      lobbyHook = dispatch.hookOnce('S_RETURN_TO_LOBBY', 1, () => {
+        process.nextTick (() => dispatch.toServer('C_SELECT_USER', 1, { id: targetId, unk: 0 }))
+      })
+    })
+
+    // hook timeout, in case something goes wrong
+    setTimeout(() => {
+      for (const hook of [prepareLobbyHook, lobbyHook, userListHook])
+        if (hook) dispatch.unhook(hook)
+    }, 15000)
+  }
 	
 }
