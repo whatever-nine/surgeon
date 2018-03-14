@@ -33,5 +33,5 @@ The following commands are supported:
 Any other input, starting with "surgeon", will return a summary of above commands in the chat.  
   
 ## Safety
-All operation from this module (except logout to lobby) are clientside, meaning **only you** can see the effects.
+All operation from this module are clientside, meaning **only you** can see the effects.
   
