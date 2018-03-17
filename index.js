@@ -231,7 +231,7 @@ module.exports = function Surgeon(dispatch) {
 				if (cmodel != 10410 || cmodel != 10810 || cmodel != 11010) correction = [3,1,9,10810]
 				break
 			case 10: //brawler
-				if (cmodel != 10211) correction = [0,1,10,10211]
+				if (cmodel != 10111 || cmodel != 10211) correction = [0,1,10,10211]
 				break
 			case 11: //ninja
 				if (cmodel != 11012) correction = [4,1,11,11012]
