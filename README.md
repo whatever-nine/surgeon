@@ -25,10 +25,10 @@ The following commands are supported:
 * surgeon load [x] - preview/load the preset with the number x
 * surgeon race - emulates a race change. Can only be used while in Celestial Arena.
 * surgeon gender - emulates a gender change. Can only be used while in Celestial Arena.
-* surgeon appearance - emulates an appearance change. Can only be used while in Celestial Arena.
-* surgeon new race - emulates a race change; creates new preset. Can only be used while in Celestial Arena.
-* surgeon new gender - emulates a gender change; creates new preset. Can only be used while in Celestial Arena.
-* surgeon new appearance - emulates an appearance change; creates new preset. Can only be used while in Celestial Arena.
+* surgeon appearance - emulates an appearance change.
+* surgeon new race - emulates a race change; creates new preset.
+* surgeon new gender - emulates a gender change; creates new preset.
+* surgeon new appearance - emulates an appearance change; creates new preset.
 * surgeon voice [0-5] - changes your voice pitch, e.g. "surgeon voice 1"
   
 Any other input, starting with "surgeon", will return a summary of above commands in the chat.  
