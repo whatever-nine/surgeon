@@ -1,8 +1,6 @@
 const path = require('path'),
 	fs = require('fs'),
     Command = require('command')
-
-const CELESTIAL_ARENA_ID = 9830
 		
 module.exports = function Surgeon(dispatch) {
 	const command = Command(dispatch)
@@ -19,7 +17,6 @@ module.exports = function Surgeon(dispatch) {
 		newpreset = false,
 		shapeid = -1,
 		stack = -1,
-		zone = 0,
 		ploc,
 		positions = {},
 		curr_char = -1,
@@ -54,7 +51,6 @@ module.exports = function Surgeon(dispatch) {
 		inSurgeonRoom = false
 		previewspawn = -1
 		newpreset = false
-		zone = 0
         
         if(customApp.characters[player] != -1) return true;
 	})
@@ -76,9 +72,8 @@ module.exports = function Surgeon(dispatch) {
 		return true
     })
 
-	dispatch.hook('S_LOAD_TOPO', 2, event =>{
+	dispatch.hook('S_LOAD_TOPO', 'raw', event =>{
 		previewspawn = -1
-		zone = event.zone
 	});
 	
 	dispatch.hook('C_CANCEL_CHANGE_USER_APPEARANCE', 1, event => {
@@ -140,10 +135,6 @@ module.exports = function Surgeon(dispatch) {
 	}
 	
 	function SurgeonRoom(room, itemid) {
-		if(zone != CELESTIAL_ARENA_ID) {
-			command.message('Please use this command in Celestial Arena to reduce the risk of crashing')
-			return
-		}
 		if(room == 2 && (loginrace == 4 || loginrace == 5)) {
 			command.message('Popori, Elin and Baraka are ineligible for gender change')
 			return
@@ -221,9 +212,10 @@ module.exports = function Surgeon(dispatch) {
 	}
 	
 	function fixModel(race, gender, job) {
-		let cmodel = 10101 + (race * 200) + (gender * 100) + job
+		let cmodel = 10101 + (race * 200) + job
+		cmodel += (gender == 1 ? 100 : 0)
 		let correction = [race,gender,job,cmodel]
-		switch (job) {  // 0 Human, 1 High Elf, 2 Aman, 3 Castanic, 4 Popori/Elin, 5 Baraka
+		switch (job) {  // 101/102 Human, 103/104 High Elf, 105/106 Aman, 107/108 Castanic, 109/110 Popori/Elin, 111 Baraka
 			case 8: //reaper
 				if (cmodel != 11009) correction = [4,1,8,11009]
 				break
@@ -231,7 +223,7 @@ module.exports = function Surgeon(dispatch) {
 				if (cmodel != 10410 || cmodel != 10810 || cmodel != 11010) correction = [3,1,9,10810]
 				break
 			case 10: //brawler
-				if (cmodel != 10111 || cmodel != 10211) correction = [0,1,10,10211]
+				if (cmodel != 10111 || cmodel != 10211) correction = [0,0,10,10111]
 				break
 			case 11: //ninja
 				if (cmodel != 11012) correction = [4,1,11,11012]
@@ -381,7 +373,7 @@ module.exports = function Surgeon(dispatch) {
   function getCharacterId(name) {
     return new Promise((resolve, reject) => {
       // request handler, resolves with character's playerId
-      const userListHook = dispatch.hookOnce('S_GET_USER_LIST', 12, event => {
+      const userListHook = dispatch.hookOnce('S_GET_USER_LIST', 13, event => {
         name = name.toLowerCase()
         let index = (name === 'nx')? ++curr_char : parseInt(name)
         if (index && index > event.characters.length) index = 1
@@ -415,7 +407,7 @@ module.exports = function Surgeon(dispatch) {
       dispatch.toClient('S_RETURN_TO_LOBBY', 1, {})
 
       // the server is not ready yet, displaying "Loading..." as char names
-      userListHook = dispatch.hookOnce('S_GET_USER_LIST', 12, event => {
+      userListHook = dispatch.hookOnce('S_GET_USER_LIST', 13, event => {
         event.characters.forEach(char => char.name = 'Loading...')
         return true
       })
