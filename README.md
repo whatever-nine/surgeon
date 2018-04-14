@@ -4,13 +4,12 @@
 A tera-proxy module that is able to change your character's appearance (race, gender, face slider and voice).  
 
 ## Difference to the original
-* Includes Snugglez's [relog](https://github.com/Snugglez/relog) module by default. Please delete any relog modules you installed in tera-proxy. You can ignore the missing opcodes unless you moved/deleted your characters then use the relog module.
+* Includes Snugglez's [relog](https://github.com/Snugglez/relog) module by default. Please delete any relog modules you installed in tera-proxy. You can ignore the missing opcodes unless you moved/deleted your characters then use the relog command which can cause unexpected behavior.
 * Cleaned-up codes.
-* Can apply and dynamically change different presets to different characters whereas the original one caused inconveniences, and has buggy side effects in certain circumstances.
+* Can apply and dynamically change different presets to different characters without relogging, whereas the original one caused inconveniences, and has buggy side effects in certain circumstances.
 * Removed aesthetic abnormalities and shape changers such as darkan and lachelith because Arborean Apparel.
-* Using race/appearance/gender voucher emulation now requires you to be in Celestial Arena.
-* Spawn the preview character clientside the first time "surgeon load [x]" command is used.
-* Includes a anti-crash that makes incompatible classes (such as Baraka gunner, Male Aman brawler, and Popori ninja) reverted into compatible class (FeCast gunner, Female human brawler, Elin Ninja).
+* Includes an anti-crash that makes incompatible classes (such as Baraka gunner, Male Aman brawler, and Popori ninja) reverted into compatible class (FeCast gunner, Female human brawler, Elin Ninja).
+* Fixed Marrow Brooch glitch which it can revert the appearance back to normal.
   
 ## Usage  
 Automatically loads your character(s) new look whenever you start the game.
