@@ -5,22 +5,14 @@ const path = require('path'),
 module.exports = function Surgeon(dispatch) {
 	const command = Command(dispatch)
 	    
-	let gameId = null,
-		player = '',
-		templateId = -1,
-		previewspawn = -1,
-		logininfo = null,
-		loginrace = -1,
-		logingender = -1,
-		loginjob = -1,
+	let userlogininfo = null,
+		usercostumes = {},
 		inSurgeonRoom = false,
 		newpreset = false,
-		shapeid = -1,
 		stack = -1,
-		ploc,
 		positions = {},
 		curr_char = -1,
-		pw
+		marrow = false
         
     let customApp = {}
     
@@ -33,29 +25,63 @@ module.exports = function Surgeon(dispatch) {
 	// ### Magic ### //
 	// ############# //
 		
-	dispatch.hook('S_LOGIN', 9, event => {
-		player = event.name
-		loginjob = event.templateId % 100 - 1
-		checkMeincustomApp(player)
-        if(customApp.characters[player]){
-			let currpreset = customApp.presets[customApp.characters[player] - 1]
-			let fix = fixModel(currpreset.race, currpreset.gender, loginjob)
+	dispatch.hook('S_LOGIN', 10, event => {
+		userlogininfo = Object.assign({}, event)
+		Object.assign(userlogininfo, {
+			race: Math.floor((event.templateId - 10101) / 200),
+			gender: Math.floor((event.templateId - 10101) / 100) % 2,
+			class: (event.templateId % 100) - 1
+		})
+		inSurgeonRoom = false
+		newpreset = false
+		marrow = false
+		UpdateUserCostumes(event)
+		checkMeincustomApp(userlogininfo.name)
+        if(customApp.characters[userlogininfo.name]){
+			let currpreset = customApp.presets[customApp.characters[userlogininfo.name] - 1]
+			let fix = fixModel(currpreset.race, currpreset.gender, userlogininfo.class)
             event.appearance = currpreset.app
             event.templateId = fix[3]
 			event.details = getBuffer(currpreset.details)
+			Object.assign(userlogininfo, {
+				surgeon_race: fix[0],
+				surgeon_gender: fix[1],
+				surgeon_app: currpreset.appearance,
+				surgeon_details: getBuffer(currpreset.details)
+			})
         }
-		({gameId, templateId} = event)
-		logininfo = event
-		loginrace = Math.floor((templateId - 10101) / 200) // 0 Human, 1 High Elf, 2 Aman, 3 Castanic, 4 Popori/Elin, 5 Baraka
-		logingender = Math.floor((templateId - 10101) / 100) % 2 // 0 male, 1 female
-		inSurgeonRoom = false
-		previewspawn = -1
-		newpreset = false
-        
-        if(customApp.characters[player] != -1) return true;
+		
+		if(customApp.characters[userlogininfo.name]) return true;
 	})
+
+	dispatch.hook('S_USER_EXTERNAL_CHANGE', 6, {filter: {fake: null}}, event => {
+		if (event.gameId.equals(userlogininfo.gameId)) UpdateUserCostumes(event)
+ 	})
 	
-	//order is -1 for costume-ex compatibility
+	// Marrow fix
+	dispatch.hook('S_UNICAST_TRANSFORM_DATA', 3, { order: -1 }, event => {
+		if(event.gameId.equals(userlogininfo.gameId) && customApp.characters[userlogininfo.name]){
+			marrow = (event.unk1 ? true : false)
+			ChangeAppearance(customApp.characters[userlogininfo.name] - 1, marrow)
+			return false
+		}
+ 	})
+	
+	// Ragnarok Fix
+	// dispatch.hook('S_ABNORMALITY_BEGIN', 2, { order: -1 }, (event) => {
+		// if(event.target+'' === userlogininfo.gameId+'' && customApp.characters[userlogininfo.name] && event.id == 10155130) {
+			// ChangeAppearance(customApp.characters[userlogininfo.name] - 1, marrow)
+		// }
+	// })
+	
+	// Ragnarok Fix
+	// dispatch.hook('S_ABNORMALITY_END', 1, { order: -1 }, (event) =>{
+		// if(event.target+'' === userlogininfo.gameId+'' && customApp.characters[userlogininfo.name] && event.id == 10155130) {
+			// ChangeAppearance(customApp.characters[userlogininfo.name] - 1, marrow)
+		// }
+	// })
+	
+	//order is -1 for costume-ex/AA compatibility
 	dispatch.hook('S_GET_USER_LIST', 12, { order: -1 }, (event) => {
         for (let indexx in event.characters) {
 			let charname = event.characters[indexx].name
@@ -71,10 +97,6 @@ module.exports = function Surgeon(dispatch) {
 		}
 		return true
     })
-
-	dispatch.hook('S_LOAD_TOPO', 'raw', event =>{
-		previewspawn = -1
-	});
 	
 	dispatch.hook('C_CANCEL_CHANGE_USER_APPEARANCE', 1, event => {
 		if(inSurgeonRoom) {
@@ -83,7 +105,7 @@ module.exports = function Surgeon(dispatch) {
 				ok: 0,
 				unk: 0
 			})
-			relogByName(player)
+			relogByName(userlogininfo.name)
 			return false
 		}
 	})
@@ -95,7 +117,7 @@ module.exports = function Surgeon(dispatch) {
 				ok: 1,
 				unk: 0
 			})
-			if (newpreset || customApp.characters[player] == 0) {
+			if (newpreset || customApp.characters[userlogininfo.name] == 0) {
 				newpreset = false
 				customApp.presets.push({
 					race: event.race,
@@ -103,22 +125,17 @@ module.exports = function Surgeon(dispatch) {
 					app: event.appearance,
 					details: event.details.toString('hex')
 				})
-				customApp.characters[player] = customApp.presets.length
+				customApp.characters[userlogininfo.name] = customApp.presets.length
 			} else {
-				customApp.presets[customApp.characters[player] - 1].race = event.race
-				customApp.presets[customApp.characters[player] - 1].gender = event.gender
-				customApp.presets[customApp.characters[player] - 1].app = event.appearance
-				customApp.presets[customApp.characters[player] - 1].details = event.details.toString('hex')
+				customApp.presets[customApp.characters[userlogininfo.name] - 1].race = event.race
+				customApp.presets[customApp.characters[userlogininfo.name] - 1].gender = event.gender
+				customApp.presets[customApp.characters[userlogininfo.name] - 1].app = event.appearance
+				customApp.presets[customApp.characters[userlogininfo.name] - 1].details = event.details.toString('hex')
 			}
-            saveCustom(); relogByName(player)
+            saveCustom(); relogByName(userlogininfo.name)
 			return false
 		}
 	})
-	
-	dispatch.hook('C_PLAYER_LOCATION', 3, event =>{
-		ploc = event.loc
-		pw = event.w
-	});
 	
 	// ######################## //
 	// ### Helper Functions ### //
@@ -135,28 +152,28 @@ module.exports = function Surgeon(dispatch) {
 	}
 	
 	function SurgeonRoom(room, itemid) {
-		if(room == 2 && (loginrace == 4 || loginrace == 5)) {
+		if(room == 2 && (userlogininfo.surgeon_race == 4 || userlogininfo.surgeon_race == 5)) {
 			command.message('Popori, Elin and Baraka are ineligible for gender change')
 			return
 		}
 		inSurgeonRoom = true
 		dispatch.toClient('S_START_CHANGE_USER_APPEARANCE', 2, {
 			type: room,
-			playerId: logininfo.playerId,
-			gender: logingender,
-			race: loginrace,
-			class: loginjob,
-			weapon: logininfo.weapon,
+			playerId: userlogininfo.playerId,
+			gender: userlogininfo.surgeon_gender,
+			race: userlogininfo.surgeon_race,
+			class: userlogininfo.class,
+			weapon: userlogininfo.weapon,
 			earring1: 0,
 			earring2: 0,
-			chest: logininfo.chest,
-			gloves: logininfo.gloves,
-			boots: logininfo.boots,
+			chest: userlogininfo.chest,
+			gloves: userlogininfo.gloves,
+			boots: userlogininfo.boots,
 			unk0: 0,
 			ring1: 0,
 			ring2: 0,
-			innerwear: logininfo.innerwear,
-			appearance: (room == 3 ? logininfo.appearance : 0),
+			innerwear: userlogininfo.innerwear,
+			appearance: (room == 3 ? userlogininfo.surgeon_appearance : 0),
 			unk1: 0,
 			unk2: 0,
 			unk3: 0,
@@ -180,11 +197,11 @@ module.exports = function Surgeon(dispatch) {
 			unk21: 0,
 			unk22: 0,
 			unk23: 0,
-			weaponEnchantment: logininfo.weaponEnchantment, // enchantment
+			weaponEnchantment: userlogininfo.weaponEnchantment, // enchantment
 			unk25: 100,
 			item: itemid,
-			details: logininfo.details,
-			details2: logininfo.details2
+			details: userlogininfo.surgeon_details,
+			details2: userlogininfo.shape
 		})
 	}
 	
@@ -234,45 +251,103 @@ module.exports = function Surgeon(dispatch) {
 		}
 		return correction
 	}
-	
-	function DespawnPreview() {
-		dispatch.toClient('S_DESPAWN_USER', 3, {
-			gameId: 66666666666666,
-			type: 1	
-		})
-		previewspawn = -1
+
+	function UpdateUserCostumes(event){
+		usercostumes = {
+				weapon,
+				body,
+				hand,
+				feet,
+				underwear,
+				head,
+				face,
+				weaponModel,
+				bodyModel,
+				handModel,
+				feetModel,
+				weaponDye,
+				bodyDye,
+				handDye,
+				feetDye,
+				underwearDye,
+				styleBackDye,
+				styleHeadDye,
+				styleFaceDye,
+				weaponEnchant,
+				styleHead,
+				styleFace,
+				styleBack,
+				styleWeapon,
+				styleBody,
+				styleFootprint,
+				styleHeadScale,
+				styleHeadRotation,
+				styleHeadTranslation,
+				styleHeadTranslationDebug,
+				styleFaceScale,
+				styleFaceRotation,
+				styleFaceTranslation,
+				styleFaceTranslationDebug,
+				styleBackScale,
+				styleBackRotation,
+				styleBackTranslation,
+				styleBackTranslationDebug,
+				accessoryTransformUnk,
+				styleBodyDye,
+				showStyle
+			} = event
 	}
 
-	function PreviewAppearance(index){
-		let currpreset = customApp.presets[index]
-		let fix = fixModel(currpreset.race, currpreset.gender, loginjob)
-		if (previewspawn > -1) DespawnPreview()
-		dispatch.toClient('S_SPAWN_USER', 12, {
-			serverId: logininfo.serverId,
-			playerId: logininfo.playerId,
-			gameId: 66666666666666,
-			loc: ploc,
-			w: pw,
-			relation: 1,
-			templateId: fix[3],
-			visible: 1,
-			alive: 1,
-			appearance: currpreset.app,
-			spawnFx: 0,
-			pose: 7,
-			body: logininfo.body,
-			hand: logininfo.hand,
-			feet: logininfo.feet,
-			weapon: logininfo.weapon,
-			underwear: logininfo.underwear,
-			weaponEnchant: logininfo.weaponEnchant,
-			showFace: logininfo.showFace,
-			showStyle: 0,
-			name: 'Surgeon Preset '+(index+1)+'',
-			details: getBuffer(currpreset.details)
-		})
-		previewspawn = index
+	function ChangeAppearance(index, marrow){
+		if (index < 0) {
+			let fix = fixModel(userlogininfo.race, userlogininfo.gender, userlogininfo.class)
+			let e = {
+				serverId: userlogininfo.serverId,
+				playerId: userlogininfo.playerId,
+				gameId: userlogininfo.gameId,
+				type: 1,
+				unk1: marrow,
+				unk2: true,
+				templateId: fix[3],
+				appearance: userlogininfo.appearance,
+				appearance2: 100,	
+				details: userlogininfo.details,
+				shape: userlogininfo.shape
+			}
+			Object.assign(e, usercostumes)
+			Object.assign(userlogininfo, {
+				surgeon_race: userlogininfo.race,
+				surgeon_gender: userlogininfo.gender,
+				surgeon_app: userlogininfo.appearance,
+				surgeon_details: userlogininfo.details
+			})
+			dispatch.toClient('S_UNICAST_TRANSFORM_DATA', 3, e)
+		} else {
+			let currpreset = customApp.presets[index]
+			let fix = fixModel(currpreset.race, currpreset.gender, userlogininfo.class)
+			let e = {
+				serverId: userlogininfo.serverId,
+				playerId: userlogininfo.playerId,
+				gameId: userlogininfo.gameId,
+				type: 1,
+				unk1: marrow,
+				unk2: true,
+				templateId: fix[3],
+				appearance: currpreset.app,
+				appearance2: 100,	
+				details: getBuffer(currpreset.details)
+			}
+			Object.assign(e, usercostumes)
+			Object.assign(userlogininfo, {
+				surgeon_race: fix[0],
+				surgeon_gender: fix[1],
+				surgeon_app: currpreset.appearance,
+				surgeon_details: getBuffer(currpreset.details)
+			})
+			dispatch.toClient('S_UNICAST_TRANSFORM_DATA', 3, e)
+		}
 	}
+
 	
 	// ################# //
 	// ### Chat Hook ### //
@@ -287,20 +362,17 @@ module.exports = function Surgeon(dispatch) {
 		case 'load':
 				stack = (number == null ? 0 : Number(number))
 				if(stack <= 0){
-					customApp.characters[player] = 0
+					customApp.characters[userlogininfo.name] = 0
+					ChangeAppearance(-1, marrow)
 					saveCustom()
-					command.message('Settings reverted. Please relog to unload the custom appearance.')
+					command.message('[Surgeon] Appearance reverted.')
 				} else if (stack > customApp.presets.length) {
-					command.message('Invalid Preset. Does not exist.')
+					command.message('[Surgeon] Invalid Preset. Does not exist.')
 				} else {
-					if (previewspawn !== (stack - 1)) {
-						PreviewAppearance(stack - 1)
-						command.message('Previewing the preset. Please use the same command again to confirm.')
-					} else {
-						customApp.characters[player] = stack
-						saveCustom()
-						command.message('Settings changed. Please relog to load the custom appearance.')
-					}
+					customApp.characters[userlogininfo.name] = stack
+					ChangeAppearance(stack - 1, marrow)
+					saveCustom()
+					command.message('[Surgeon] Using preset '+stack)
 				}
 				break
 		case 'race': newpreset = false; SurgeonRoom(1, 168011); break
@@ -316,8 +388,8 @@ module.exports = function Surgeon(dispatch) {
 			break
 		case 'voice': voiceChange((number == null ? 0 : Number(number))); break
 		default:
-			command.message('Commands:<br>'
-								+ ' "surgeon load [x]" (preview/load your saved preset slot x, 0 = disable"),<br>'
+			command.message('[Surgeon] Commands:<br>'
+								+ ' "surgeon load [x]" (load your saved preset slot x, 0 = disable"),<br>'
 								+ ' "surgeon race" (emulates a race change),<br>'
 								+ ' "surgeon gender" (emulates a gender change),<br>'
 								+ ' "surgeon face" (emulates an appearance change),<br>'
