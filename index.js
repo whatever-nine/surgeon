@@ -30,7 +30,11 @@ module.exports = function Surgeon(dispatch) {
 		Object.assign(userlogininfo, {
 			race: Math.floor((event.templateId - 10101) / 200),
 			gender: Math.floor((event.templateId - 10101) / 100) % 2,
-			class: (event.templateId % 100) - 1
+			class: (event.templateId % 100) - 1,
+			surgeon_race: Math.floor((event.templateId - 10101) / 200),
+			surgeon_gender: Math.floor((event.templateId - 10101) / 100) % 2,
+			surgeon_app: userlogininfo.appearance,
+			surgeon_details: userlogininfo.details
 		})
 		inSurgeonRoom = false
 		newpreset = false
