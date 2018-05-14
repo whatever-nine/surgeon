@@ -1,11 +1,7 @@
 {
 	"files" : {
-		"index.js" : "123f933bb1b32824768d032bc7451cdc55c5332b02416111dca6c670490a19a9",
-		"app.json" : {
-			"overwrite" : false,
-			"hash" : "b70c276038f63379a8c118898625bd82e83f12a8d98c980c9424a1ec14a39a2d"
-		},
-		"README.md" : "59c8d8d93764ef56349e21d600cefb08d50ac680dc5bc8d1e1917cbfac54793b"
+		"index.js" : "feef2723481a972351322fed4d803478971f3f504bf6161f451d9a6ad76209fe",
+		"README.md" : "5d9e0bbdfef77c75acf735f1769f97bfd23736d1984f8ca712f6e893824be2b5"
 	},
 	"defs" : {
 		"C_CANCEL_CHANGE_USER_APPEARANCE" : 1,

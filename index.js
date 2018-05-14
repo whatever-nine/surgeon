@@ -170,41 +170,12 @@ module.exports = function Surgeon(dispatch) {
 			race: userlogininfo.surgeon_race,
 			class: userlogininfo.class,
 			weapon: userlogininfo.weapon,
-			earring1: 0,
-			earring2: 0,
 			chest: userlogininfo.body,
 			gloves: userlogininfo.hand,
 			boots: userlogininfo.feet,
-			unk0: 0,
-			ring1: 0,
-			ring2: 0,
 			innerwear: userlogininfo.innerwear,
 			appearance: (room == 3 ? userlogininfo.surgeon_app : 0),
-			unk1: 0,
-			unk2: 0,
-			unk3: 0,
-			unk4: 0,
-			unk5: 0,
-			unk6: 0,
-			unk7: 0,
-			unk8: 0,
-			unk9: 0,
-			unk10: 0,
-			unk11: 0,
-			unk12: 0,
-			unk13: 0,
-			unk14: 0,
-			unk15: 0,
-			unk16: 0,
-			unk17: 0,
-			unk18: 0,
-			unk19: 0,
-			unk20: 0,
-			unk21: 0,
-			unk22: 0,
-			unk23: 0,
 			weaponEnchantment: userlogininfo.weaponEnchant, // enchantment
-			unk25: 100,
 			item: itemid,
 			details: userlogininfo.surgeon_details,
 			details2: userlogininfo.surgeon_details2
@@ -362,7 +333,8 @@ module.exports = function Surgeon(dispatch) {
 	// ################# //
 	
 	command.add('relog', (name) => {
-		relogByName(name)
+		if (!name) relogByName(userlogininfo.name)	// works, but resets any AA dressing
+		else relogByName(name)
 	})
 	
 	command.add('surgeon', (param, number, num2) => {
@@ -380,7 +352,7 @@ module.exports = function Surgeon(dispatch) {
 					customApp.characters[userlogininfo.name] = stack
 					ChangeAppearance(stack - 1, marrow)
 					saveCustom()
-					command.message('[Surgeon] Using preset '+stack)
+					command.message('[Surgeon] Using preset ' + stack)
 				}
 				break
 		case 'race': newpreset = false; SurgeonRoom(1, 168011); break
@@ -437,7 +409,7 @@ module.exports = function Surgeon(dispatch) {
   // })
 
   // Keep track of current char for relog nx
-  dispatch.hook('C_SELECT_USER', 2, /*{order: 100, filter: {fake: null}},*/ event => {
+  dispatch.hook('C_SELECT_USER', 1, /*{order: 100, filter: {fake: null}},*/ event => {
     curr_char = positions[event.id]
   })
 
