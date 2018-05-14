@@ -34,7 +34,8 @@ module.exports = function Surgeon(dispatch) {
 			surgeon_race: Math.floor((event.templateId - 10101) / 200),
 			surgeon_gender: Math.floor((event.templateId - 10101) / 100) % 2,
 			surgeon_app: userlogininfo.appearance,
-			surgeon_details: userlogininfo.details
+			surgeon_details: userlogininfo.details,
+			surgeon_details2: userlogininfo.shape
 		})
 		inSurgeonRoom = false
 		newpreset = false
@@ -50,8 +51,9 @@ module.exports = function Surgeon(dispatch) {
 			Object.assign(userlogininfo, {
 				surgeon_race: fix[0],
 				surgeon_gender: fix[1],
-				surgeon_app: currpreset.appearance,
+				surgeon_app: currpreset.app,
 				surgeon_details: getBuffer(currpreset.details)
+				// surgeon_details2: getBuffer(currpreset.shape)
 			})
         }
 		
@@ -86,7 +88,7 @@ module.exports = function Surgeon(dispatch) {
 	// })
 	
 	//order is -1 for costume-ex/AA compatibility
-	dispatch.hook('S_GET_USER_LIST', 12, { order: -1 }, (event) => {
+	dispatch.hook('S_GET_USER_LIST', 14, { order: -1 }, (event) => {
         for (let indexx in event.characters) {
 			let charname = event.characters[indexx].name
 			checkMeincustomApp(charname)
@@ -170,14 +172,14 @@ module.exports = function Surgeon(dispatch) {
 			weapon: userlogininfo.weapon,
 			earring1: 0,
 			earring2: 0,
-			chest: userlogininfo.chest,
-			gloves: userlogininfo.gloves,
-			boots: userlogininfo.boots,
+			chest: userlogininfo.body,
+			gloves: userlogininfo.hand,
+			boots: userlogininfo.feet,
 			unk0: 0,
 			ring1: 0,
 			ring2: 0,
 			innerwear: userlogininfo.innerwear,
-			appearance: (room == 3 ? userlogininfo.surgeon_appearance : 0),
+			appearance: (room == 3 ? userlogininfo.surgeon_app : 0),
 			unk1: 0,
 			unk2: 0,
 			unk3: 0,
@@ -201,14 +203,15 @@ module.exports = function Surgeon(dispatch) {
 			unk21: 0,
 			unk22: 0,
 			unk23: 0,
-			weaponEnchantment: userlogininfo.weaponEnchantment, // enchantment
+			weaponEnchantment: userlogininfo.weaponEnchant, // enchantment
 			unk25: 100,
 			item: itemid,
 			details: userlogininfo.surgeon_details,
-			details2: userlogininfo.shape
+			details2: userlogininfo.surgeon_details2
 		})
 	}
 	
+	/* If you have this opcode mapped... It should work, I guess
 	function voiceChange(voicelevel) {
 		if(voicelevel < 0 || voicelevel > 5) {
 			command.message('Please choose a voice id between 0 and 5')
@@ -220,6 +223,7 @@ module.exports = function Surgeon(dispatch) {
 			})
 		}
 	}
+	*/
 	
 	function checkMeincustomApp(p) {
 		if (!customApp.characters || !customApp.presets) { //init customApp value
@@ -241,10 +245,10 @@ module.exports = function Surgeon(dispatch) {
 				if (cmodel != 11009) correction = [4,1,8,11009]
 				break
 			case 9: //gunner
-				if (cmodel != 10410 || cmodel != 10810 || cmodel != 11010) correction = [3,1,9,10810]
+				if (cmodel != 10410 && cmodel != 10810 && cmodel != 11010) correction = [3,1,9,10810]
 				break
 			case 10: //brawler
-				if (cmodel != 10111 || cmodel != 10211) correction = [0,0,10,10111]
+				if (cmodel != 10111 && cmodel != 10211) correction = [0,0,10,10111]
 				break
 			case 11: //ninja
 				if (cmodel != 11012) correction = [4,1,11,11012]
@@ -406,7 +410,7 @@ module.exports = function Surgeon(dispatch) {
 	})
 	
 	function saveCustom() {
-		fs.writeFileSync(path.join(__dirname, 'app.json'), JSON.stringify(customApp))
+		fs.writeFileSync(path.join(__dirname, 'app.json'), JSON.stringify(customApp, null, '\t'))
 	}
 	
 	// ################# //
@@ -421,19 +425,19 @@ module.exports = function Surgeon(dispatch) {
 	}
 	
   // Grab the user list the first time the client sees the lobby
-  dispatch.hookOnce('S_GET_USER_LIST', 12, event => updatePositions(event.characters))
+  dispatch.hookOnce('S_GET_USER_LIST', 14, event => updatePositions(event.characters))
 
-  dispatch.hook('C_DELETE_USER', 'raw', () =>
-    dispatch.hookOnce('S_GET_USER_LIST', 12, event => updatePositions(event.characters))
-  )
+  // dispatch.hook('C_DELETE_USER', 'raw', () =>
+    // dispatch.hookOnce('S_GET_USER_LIST', 12, event => updatePositions(event.characters))
+  // )
 
   // Update positions on reorder
-  dispatch.hook('C_CHANGE_USER_LOBBY_SLOT_ID', event => {
-    updatePositions(event.characters)
-  })
+  // dispatch.hook('C_CHANGE_USER_LOBBY_SLOT_ID', 1, event => {
+    // updatePositions(event.characters)
+  // })
 
   // Keep track of current char for relog nx
-  dispatch.hook('C_SELECT_USER', 1, /*{order: 100, filter: {fake: null}},*/ event => {
+  dispatch.hook('C_SELECT_USER', 2, /*{order: 100, filter: {fake: null}},*/ event => {
     curr_char = positions[event.id]
   })
 
@@ -449,7 +453,7 @@ module.exports = function Surgeon(dispatch) {
   function getCharacterId(name) {
     return new Promise((resolve, reject) => {
       // request handler, resolves with character's playerId
-      const userListHook = dispatch.hookOnce('S_GET_USER_LIST', 13, event => {
+      const userListHook = dispatch.hookOnce('S_GET_USER_LIST', 14, event => {
         name = name.toLowerCase()
         let index = (name === 'nx')? ++curr_char : parseInt(name)
         if (index && index > event.characters.length) index = 1
@@ -483,7 +487,7 @@ module.exports = function Surgeon(dispatch) {
       dispatch.toClient('S_RETURN_TO_LOBBY', 1, {})
 
       // the server is not ready yet, displaying "Loading..." as char names
-      userListHook = dispatch.hookOnce('S_GET_USER_LIST', 13, event => {
+      userListHook = dispatch.hookOnce('S_GET_USER_LIST', 14, event => {
         event.characters.forEach(char => char.name = 'Loading...')
         return true
       })
