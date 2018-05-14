@@ -8,6 +8,7 @@ A tera-proxy module that is able to change your character's appearance (race, ge
 * Removed aesthetic abnormalities and shape changers such as darkan and lachelith because Arborean Apparel.
 * Includes an anti-crash that makes incompatible classes (such as Baraka gunner, Male Aman brawler, and Popori ninja) reverted into compatible class (FeCast gunner, Female human brawler, Elin Ninja).
 * Fixed Marrow Brooch glitch which it can revert the appearance back to normal.
+* Added auto-update compatibility with [Caali](https://github.com/hackerman-caali)'s tera-proxy.
   
 ### Usage  
 Automatically loads your character(s) new look whenever you start the game.
