@@ -369,14 +369,13 @@ module.exports = function Surgeon(dispatch) {
 		case 'voice': voiceChange((number == null ? 0 : Number(number))); break
 		default:
 			command.message('[Surgeon] Commands:<br>'
-								+ ' "surgeon load [x]" (load your saved preset slot x, 0 = disable"),<br>'
-								+ ' "surgeon race" (emulates a race change),<br>'
-								+ ' "surgeon gender" (emulates a gender change),<br>'
-								+ ' "surgeon face" (emulates an appearance change),<br>'
-								+ ' "surgeon new race" (emulates a race change; creates new preset),<br>'
-								+ ' "surgeon new gender" (emulates a gender change; creates new preset),<br>'
-								+ ' "surgeon new face" (emulates an appearance change; creates new preset),<br>'
-								+ ' "surgeon voice [0-5]" (changes your voice pitch),<br>'
+								+ ' "surgeon load [x]" - load your saved preset slot x, 0 - revert to original,<br>'
+								+ ' "surgeon race" - emulates a race change,<br>'
+								+ ' "surgeon gender" - emulates a gender change,<br>'
+								+ ' "surgeon face" - emulates an appearance change; edits current preset, or creates new one if used with your "true" appearance,<br>'
+								+ ' "surgeon new race" - emulates a race change; creates new preset,<br>'
+								+ ' "surgeon new gender" - emulates a gender change; creates new preset,<br>'
+								+ ' "surgeon new face" - emulates an appearance change; creates new preset<br>'
 			)
 		}
 	})
