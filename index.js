@@ -17,9 +17,15 @@ module.exports = function Surgeon(dispatch) {
     let customApp = {}
     
     try {
-		customApp = require('./app.json')
+		customApp = require('./presets.json')
 	}
-	catch(e) { customApp = {} }
+	catch(e) {
+		try {
+			customApp = require('./app.json')
+			fs.renameSync(path.join(__dirname, 'app.json'), path.join(__dirname, 'presets.json'))
+		}
+		catch(e) { customApp = {} }
+	}
 
 	// ############# //
 	// ### Magic ### //
@@ -381,7 +387,7 @@ module.exports = function Surgeon(dispatch) {
 	})
 	
 	function saveCustom() {
-		fs.writeFileSync(path.join(__dirname, 'app.json'), JSON.stringify(customApp, null, '\t'))
+		fs.writeFileSync(path.join(__dirname, 'presets.json'), JSON.stringify(customApp, null, '\t'))
 	}
 	
 	// ################# //

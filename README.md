@@ -32,5 +32,5 @@ All operation from this module are clientside, meaning **only you** can see the 
 Note that race change **will** desync you when using skills unless racial skill movement between old and new races is extremely similar (ie. sorc, gunner). (c) [Pinkie Pie](https://github.com/pinkipi)
 
 ### Known issues
-* After changing preset in-game your character's dressing "stucks" (you can't put on or take off **any** piece of equipment or costume) until relog.
-* Changing appearance resets any Arborean Apparel dressings as like as relogging using a `relog` command (that's why I did not add it to commands list).
+* Poor compatibility with dress-up modules (tested with Arborean Apparel) - changing appearance resets AA preset for current character as like as relogging using a `relog` command (that's why I did not add it to commands list).
+* After changing preset in-game by `surgeon load` command your character window completely breaks - you can't equip/unequip **any** piece of equipment or costume until relog (it also breaks AA - you can edit your preset, but your character's look will remain the same). You can use `relog` command, but see above. So, manual relog is the best solution.
