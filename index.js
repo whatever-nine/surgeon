@@ -72,7 +72,7 @@ module.exports = function Surgeon(dispatch) {
 			Object.assign(userlogininfo, {
 				surgeon_race: fix[0],
 				surgeon_gender: fix[1],
-				surgeon_app: currpreset.appearance,
+				surgeon_appearance: currpreset.appearance,
 				surgeon_details: Buffer.from(currpreset.details, 'hex')
 			})
         }
@@ -305,7 +305,7 @@ module.exports = function Surgeon(dispatch) {
 			Object.assign(userlogininfo, {
 				surgeon_race: userlogininfo.race,
 				surgeon_gender: userlogininfo.gender,
-				surgeon_app: userlogininfo.appearance,
+				surgeon_appearance: userlogininfo.appearance,
 				surgeon_details: userlogininfo.details
 			})
 			dispatch.toClient('S_UNICAST_TRANSFORM_DATA', 3, e)
@@ -329,7 +329,7 @@ module.exports = function Surgeon(dispatch) {
 			Object.assign(userlogininfo, {
 				surgeon_race: fix[0],
 				surgeon_gender: fix[1],
-				surgeon_app: currpreset.appearance,
+				surgeon_appearance: currpreset.appearance,
 				surgeon_details: Buffer.from(currpreset.details, 'hex')
 			})
 			dispatch.toClient('S_UNICAST_TRANSFORM_DATA', 3, e)
@@ -373,8 +373,8 @@ module.exports = function Surgeon(dispatch) {
 		default:
 			command.message('[Surgeon] Commands:')
 			command.message('"surgeon load [x]" - load your saved preset slot x, 0 - revert to original')
-			command.message('"surgeon race" - Emulates a race change. Will cause desyncs when using skills unless the racial skill animation is almost identical.')
-			command.message('"surgeon gender" - Emulates a gender change. Will cause desyncs when using skills unless the racial skill animation is almost identical.')
+			command.message('"surgeon race" - Emulates a race change. May cause desyncs due to skill speed difference between races')
+			command.message('"surgeon gender" - Emulates a gender change. May cause desyncs due to skill speed difference between genders')
 			command.message('"surgeon face" - Emulates an appearance change; edits current preset, or creates new preset if used with your "true" appearance')
 			command.message('"surgeon new race" - Does the same as "surgeon race"; creates new preset.')
 			command.message('"surgeon new gender" - Does the same as "surgeon gender"; creates new preset.')
