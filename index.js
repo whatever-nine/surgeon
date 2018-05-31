@@ -11,35 +11,43 @@ module.exports = function Surgeon(dispatch) {
 		newpreset = false,
 		stack = -1,
 		positions = {},
-		curr_char = -1,
 		marrow = false
         
     let customApp = {}
     
 	try {
 		customApp = require('./presets.json')
+		UpdatePresets()
 	} catch(e) {
 		try {
 			customApp = require('./app.json')
-			for (let i in customApp.presets) {
-				if (customApp.presets[i].app) {
-					customApp.presets[i].appearance = customApp.presets[i].app
-					delete customApp.presets[i].app
-				}
-				if (customApp.presets[i].details.data) {
-					let retbuffer = customApp.presets[i].details.data
-					delete customApp.presets[i].details
-					customApp.presets[i].details = Buffer.from(retbuffer).toString('hex')
-				}
-			}
+			UpdatePresets()
 			fs.renameSync(path.join(__dirname, 'app.json'), path.join(__dirname, 'presets.json'))
-		} catch(e) { customApp = {} }
+		} catch(e) { customApp = {version: 1, characters: {}, presets: []} }
 	}
+	
+	
+	function UpdatePresets() {
+		if (!customApp.version) customApp.version = 1 //initialize the preset version to 1 if it does not exist
+		for (let i in customApp.presets) {
+			if (customApp.presets[i].app) { //raname app to appearance
+				customApp.presets[i].appearance = customApp.presets[i].app
+				delete customApp.presets[i].app
+			}
+			if (customApp.presets[i].details.data) { //older version; change the array typed details to hex
+				let retbuffer = customApp.presets[i].details.data
+				delete customApp.presets[i].details
+				customApp.presets[i].details = Buffer.from(retbuffer).toString('hex')
+			}
+		}
+	}
+	
 	// ############# //
 	// ### Magic ### //
 	// ############# //
-		
-	dispatch.hook('S_LOGIN', 10, event => {
+	
+	//For stability reasons, let AA registers your true race and gender first
+	dispatch.hook('S_LOGIN', 10, { order: 1 }, event => {
 		userlogininfo = Object.assign({}, event)
 		Object.assign(userlogininfo, {
 			race: Math.floor((event.templateId - 10101) / 200),
@@ -58,7 +66,7 @@ module.exports = function Surgeon(dispatch) {
         if(customApp.characters[userlogininfo.name]){
 			let currpreset = customApp.presets[customApp.characters[userlogininfo.name] - 1]
 			let fix = fixModel(currpreset.race, currpreset.gender, userlogininfo.class)
-            event.appearance = currpreset.app || currpreset.appearance
+            event.appearance = currpreset.appearance
             event.templateId = fix[3]
 			event.details = Buffer.from(currpreset.details, 'hex')
 			Object.assign(userlogininfo, {
@@ -73,7 +81,7 @@ module.exports = function Surgeon(dispatch) {
 	})
 
 	dispatch.hook('S_USER_EXTERNAL_CHANGE', 6, { order: 999, filter: {fake: null}}, event => {
-		if (event.gameId.equals(userlogininfo.gameId)) {
+		if (event.gameId.equals(userlogininfo.gameId) && customApp.characters[userlogininfo.name]) {
 			UpdateUserCostumes(event)
 			ChangeAppearance(customApp.characters[userlogininfo.name] - 1, marrow)
 		}
@@ -203,12 +211,6 @@ module.exports = function Surgeon(dispatch) {
 	}
 	
 	function checkMeincustomApp(p) {
-		if (!customApp.characters || !customApp.presets) { //init customApp value
-			customApp = {
-				characters: {},
-				presets: []
-			}
-		}
 		if (!customApp.characters[p]) customApp.characters[p] = 0
 		if (customApp.characters[p] > customApp.presets.length) customApp.characters[p] = 0
 	}
@@ -369,15 +371,14 @@ module.exports = function Surgeon(dispatch) {
 			}
 			break
 		default:
-			command.message('[Surgeon] Commands:<br>'
-								+ ' "surgeon load [x]" (load your saved preset slot x, 0 = disable"),<br>'
-								+ ' "surgeon race" (emulates a race change),<br>'
-								+ ' "surgeon gender" (emulates a gender change),<br>'
-								+ ' "surgeon face" (emulates an appearance change),<br>'
-								+ ' "surgeon new race" (emulates a race change; creates new preset),<br>'
-								+ ' "surgeon new gender" (emulates a gender change; creates new preset),<br>'
-								+ ' "surgeon new face" (emulates an appearance change; creates new preset),<br>'
-			)
+			command.message('[Surgeon] Commands:')
+			command.message('"surgeon load [x]" - load your saved preset slot x, 0 - revert to original')
+			command.message('"surgeon race" - Emulates a race change. May cause desyncs due to skill speed difference between races')
+			command.message('"surgeon gender" - Emulates a gender change. May cause desyncs due to skill speed difference between genders')
+			command.message('"surgeon face" - Emulates an appearance change; edits current preset, or creates new preset if used with your "true" appearance')
+			command.message('"surgeon new race" - Does the same as "surgeon race"; creates new preset.')
+			command.message('"surgeon new gender" - Does the same as "surgeon gender"; creates new preset.')
+			command.message('"surgeon new face" - Does the same as "surgeon face"; creates new preset.')
 		}
 	})
 	
@@ -399,20 +400,6 @@ module.exports = function Surgeon(dispatch) {
   // Grab the user list the first time the client sees the lobby
   dispatch.hookOnce('S_GET_USER_LIST', 14, event => updatePositions(event.characters))
 
-  // dispatch.hook('C_DELETE_USER', 'raw', () =>
-    // dispatch.hookOnce('S_GET_USER_LIST', 12, event => updatePositions(event.characters))
-  // )
-
-  // Update positions on reorder
-  // dispatch.hook('C_CHANGE_USER_LOBBY_SLOT_ID', event => {
-    // updatePositions(event.characters)
-  // })
-
-  // Keep track of current char for relog nx
-  dispatch.hook('C_SELECT_USER', 1, /*{order: 100, filter: {fake: null}},*/ event => {
-    curr_char = positions[event.id]
-  })
-
   function updatePositions(characters) {
     if (!characters) return
     positions = {}
@@ -424,7 +411,7 @@ module.exports = function Surgeon(dispatch) {
 
   function getCharacterId(name) {
     return new Promise((resolve, reject) => {
-      // request handler, resolves with character's playerId
+      // request handler, resolves with character's id
       const userListHook = dispatch.hookOnce('S_GET_USER_LIST', 14, event => {
         name = name.toLowerCase()
         event.characters.forEach((char, i) => {
