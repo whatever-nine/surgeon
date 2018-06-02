@@ -29,3 +29,6 @@ Any other input, starting with `surgeon`, will return a summary of above command
 ### Safety
 All operation from this module are clientside, meaning **only you** can see the effects.
 Note that race change **will** desync you when using skills unless racial skill movement between old and new races is extremely similar (ie. sorc, gunner). (c) [Pinkie Pie](https://github.com/pinkipi)
+
+### TODO
+* Find a way to fix game crashes while in appearance changing room (it happens if server sends you packets during this, I think).
