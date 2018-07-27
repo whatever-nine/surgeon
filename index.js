@@ -106,7 +106,7 @@ module.exports = function Surgeon(dispatch) {
 		}
  	});
 
-	dispatch.hook('S_GET_USER_LIST', 14, { order: -1 }, (event) => {
+	dispatch.hook('S_GET_USER_LIST', 14, { order: 0 }, (event) => {
 		for (let indexx in event.characters) {
 			let charname = event.characters[indexx].name;
 			checkMeincustomApp(charname);
@@ -195,13 +195,14 @@ module.exports = function Surgeon(dispatch) {
 				details2: userlogininfo.shape
 			});
 
-			userListHook = dispatch.hook('*', 'raw', { order: 100, filter: { incoming: true }}, () => {
+			userListHook = dispatch.hook('*', 'raw', { order: 999, filter: { incoming: true }}, () => {
 				return false;
 			});
 			
 			// to prevent unpredictable behavior if you try to leave room before server sends you character list
 			// (looks ugly af, but i have no any idea how to implement this in a different way)
-			dispatch.hookOnce('S_GET_USER_LIST', 14, { order: 0 }, event => {
+			// actually, it doesn't make much sense because it takes half of this time to load the room (maybe it'll be faster on ssd)
+			dispatch.hookOnce('S_GET_USER_LIST', 14, { order: -1 }, event => {
 				inLobby = true;
 				dispatch.unhook(userListHook);
 				event.characters.forEach(character => {
