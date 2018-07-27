@@ -1,7 +1,7 @@
 {
 	"files" : {
-		"index.js" : "6f24ce1f0f8810dabecccc2361e4340b49cc54b510071746a8fefd30ef0bfa86",
-		"README.md" : "a67c7e9ac3d26415fddd1fe5eb3ae62a6241f0e2647053836b4988327d115d31"
+		"index.js" : "ed29660c078ee0e10fd2ad4fd04b872e02c0c53e191114a5dfda0ba9116ed9fb",
+		"README.md" : "a72f6d73c81cf7285d52a6d436963a4f93e30e93f597a8a4e046b5c5df768a20"
 	},
 	"defs" : {
 		"C_CANCEL_CHANGE_USER_APPEARANCE" : 1,

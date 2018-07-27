@@ -8,6 +8,7 @@ A tera-proxy module that is able to change your character's appearance (race, ge
 * Includes an anti-crash that makes incompatible classes (such as Baraka gunner, Male Aman brawler, and Popori ninja) reverted into compatible class (FeCast gunner, Female human brawler, Elin Ninja).
 * Fixed Marrow Brooch glitch which it can revert the appearance back to normal.
 * Added auto-update compatibility with [Caali](https://github.com/hackerman-caali)'s tera-proxy.
+* Fixed (I hope) crashes when in an emulated room.
   
 ### Usage  
 Automatically loads your character(s) new look whenever you start the game.
@@ -31,4 +32,6 @@ All operation from this module are clientside, meaning **only you** can see the 
 Note that race change **will** desync you when using skills unless racial skill movement between old and new races is extremely similar (ie. sorc, gunner). (c) [Pinkie Pie](https://github.com/pinkipi)
 
 ### TODO
-* Find a way to fix game crashes while in appearance changing room (it happens if server sends you packets during this, I think).
+* Make code less bad (c)
+* Fix a bug with `surgeon load [x]` when used with original appearance
+* Rewrite completely, using Caali's tera-game-state library
