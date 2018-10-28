@@ -3,7 +3,7 @@
 		"index.js" : "e276ce0e09cc1af4f0003a88efc6ea2790e564fa4318974bfe093d16bdea2220",
 		"README.md" : "4562ef682ee3769da1ef2b13e2d828fec574918ea503ebdcb13b8d8e7f44893f",
 		"settings_migration.js" : "fe02b34bfa63c54674f0b2f5a1d7aab95ad089afe33be21a666827664c70d5a9",
-		"module.json" : "021391cc83cccb681377b982aa2ec018f80ccb260da0d32b3325db061a31ca48"
+		"module.json" : "9b7a6617ce68e00fa9cb182569a3bdac9b5d367a4b172e676175d8d84da5acbd"
 	},
 	"defs" : {
 		"C_CANCEL_CHANGE_USER_APPEARANCE" : 1,

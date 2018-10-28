@@ -1,5 +1,5 @@
 {
-	"disableAutoUpdate": true,
+	"disableAutoUpdate": false,
 	"options": {
 		"niceName": "Surgeon",
 		"settingsVersion": 1,
