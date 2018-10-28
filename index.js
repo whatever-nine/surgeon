@@ -381,7 +381,7 @@ module.exports = function surgeon(mod) {
 	mod.command.add(['surgeon', 'surg'], {
 		load(param) {
 			if (param != null && !Number.isNaN(param)) {
-				applyPreset(num);
+				applyPreset(param);
 			}
 			else {
 				mod.command.message('Invalid preset number!');
