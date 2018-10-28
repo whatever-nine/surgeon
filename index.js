@@ -59,15 +59,20 @@ module.exports = function surgeon(mod) {
 			event.characters.forEach(character => {
 				if (mod.settings.characters[character.name] == null) {
 					mod.settings.characters[character.name] = 0;
-					
 				}
 				else {
 					if (mod.settings.characters[character.name]) {
 						let preset = mod.settings.presets[mod.settings.characters[character.name] - 1];
-						character.race = preset.race;
-						character.gender = preset.gender;
-						character.appearance = Number(preset.appearance);
-						character.details = Buffer.from(preset.details, 'hex');
+						let template = getTemplate(preset.race, preset.gender, character.class);
+						if (isCorrectTemplate(template, character.class)) {
+							character.race = preset.race;
+							character.gender = preset.gender;
+							character.appearance = Number(preset.appearance);
+							character.details = Buffer.from(preset.details, 'hex');
+						} else {
+							console.log(`Unable to apply preset ${mod.settings.characters[character.name]} (${presetToString(currentPreset.race, currentPreset.gender)}) to character ${character.name} (${jobToString(userLoginInfo.class)})!`);
+							mod.settings.characters[character.name] = 0;
+						}
 					}
 				}
 			});
@@ -151,7 +156,7 @@ module.exports = function surgeon(mod) {
 	mod.hook('S_USER_EXTERNAL_CHANGE', 6, { order: 999, filter: { fake: null }}, event => {
 		if (event.gameId.equals(userLoginInfo.gameId) && mod.settings.characters[userLoginInfo.name]) {
 			updateUserCostumes(event);
-			applyPreset(mod.settings.characters[userLoginInfo.name] - 1, marrow);
+			applyPreset(mod.settings.characters[userLoginInfo.name]);
 		}
  	});
 	
@@ -212,15 +217,15 @@ module.exports = function surgeon(mod) {
 	function isCorrectTemplate(template, job) {
 		switch (job) {	// 101XX/102XX Human, 103xx/104xx High Elf, 105x/106xx Aman, 107xx/108xx Castanic, 109xx/110xx Popori/Elin, 111xx Baraka
 			case 8:		// reaper
-				if (template != 11009) return false;
+				return (template == 11009);
 			case 9:		// gunner
-				if (template != 10410 && template != 10810 && template != 11010) return false;
+				return ([10410, 10810, 11010].includes(template));
 			case 10:	// brawler
-				if (template != 10111 && template != 10211) return false;
+				return ([10111, 10211].includes(template));
 			case 11:	// ninja
-				if (template != 11012) return false;
+				return (template == 11012);
 			case 12:	// Valkyrie
-				if (template != 10813) return false;
+				return (template == 10813);
 			default: 
 				return true;
 		}
@@ -285,21 +290,14 @@ module.exports = function surgeon(mod) {
 	function applyPreset(num) {
 		if (num <= mod.settings.presets.length && num >= 0) {
 			let prevPreset = mod.settings.characters[userLoginInfo.name];
-			if (num == 0) {
+			if (num == 0) {		// revert appearance to original
+				mod.settings.characters[userLoginInfo.name] = 0;
 				currentPreset = {
 					race: userLoginInfo.race,
 					gender: userLoginInfo.gender,
 					appearance: userLoginInfo.appearance.toString(),
 					details: userLoginInfo.details.toString('hex')
 				};
-				mod.command.message('Appearance reverted.');
-			} else {
-				currentPreset = mod.settings.presets[num - 1];
-				mod.command.message(`Using preset ${num}`);
-			}
-			let template = getTemplate(currentPreset.race, currentPreset.gender, userLoginInfo.class);
-			if (isCorrectTemplate(template, userLoginInfo.class)) {
-				mod.settings.characters[userLoginInfo.name] = num;
 				let e = {
 					serverId: userLoginInfo.serverId,
 					playerId: userLoginInfo.playerId,
@@ -307,25 +305,50 @@ module.exports = function surgeon(mod) {
 					type: 0,
 					unk1: marrow,
 					unk2: true,
-					templateId: getTemplate(currentPreset.race, currentPreset.gender, userLoginInfo.class),
-					appearance: Number(currentPreset.appearance),
+					templateId: userLoginInfo.templateId,
+					appearance: userLoginInfo.appearance,
 					appearance2: 100,
-					details: Buffer.from(currentPreset.details, 'hex'),
+					details: userLoginInfo.details,
 					shape: userLoginInfo.shape
 				};
 				Object.assign(e, usercostumes);
 				mod.send('S_UNICAST_TRANSFORM_DATA', 3, e);
-				if (!prevPreset) {
-					// updateUserCostumes(usercostumes);
-					// applyPreset(mod.settings.characters[userLoginInfo.name] - 1, marrow);
-					e = {
+				mod.command.message('Appearance reverted.');
+			} else {			// load preset
+				let template = getTemplate(mod.settings.presets[num - 1].race, mod.settings.presets[num - 1].gender, userLoginInfo.class);
+				if (isCorrectTemplate(template, userLoginInfo.class)) {		// if chosen preset can be applied to current character
+					mod.settings.characters[userLoginInfo.name] = num;
+					currentPreset = mod.settings.presets[num - 1];
+					let e = {
+						serverId: userLoginInfo.serverId,
+						playerId: userLoginInfo.playerId,
 						gameId: userLoginInfo.gameId,
+						type: 0,
+						unk1: marrow,
+						unk2: true,
+						templateId: template,
+						appearance: Number(currentPreset.appearance),
+						appearance2: 100,
+						details: Buffer.from(currentPreset.details, 'hex'),
+						shape: userLoginInfo.shape
 					};
 					Object.assign(e, usercostumes);
-					mod.send('S_USER_EXTERNAL_CHANGE', 6, e);
+					mod.send('S_UNICAST_TRANSFORM_DATA', 3, e);
+					if (!prevPreset) {
+						// updateUserCostumes(usercostumes);
+						// applyPreset(mod.settings.characters[userLoginInfo.name] - 1, marrow);
+						e = {
+							gameId: userLoginInfo.gameId,
+						};
+						Object.assign(e, usercostumes);
+						mod.send('S_USER_EXTERNAL_CHANGE', 6, e);
+					}
+					if (prevPreset != num) {
+						mod.command.message(`Using preset ${num}`);
+					}
+				} else {
+					mod.command.message(`Unable to apply this preset (${presetToString(currentPreset.race, currentPreset.gender)}) to ${jobToString(userLoginInfo.class)}!`);
 				}
-			} else {
-				mod.command.message(`Unable to apply this preset (${presetToString(currentPreset.race, currentPreset.gender)}) to ${jobToString(userLoginInfo.class)}!`);
 			}
 		} else {
 			mod.command.message(`Invalid preset number!${num > mod.settings.presets.length ? 'Total count: ' + mod.settings.presets.length : ''}`);
@@ -380,11 +403,11 @@ module.exports = function surgeon(mod) {
 
 	mod.command.add(['surgeon', 'surg'], {
 		load(param) {
-			if (param != null && !Number.isNaN(param)) {
-				applyPreset(param);
+			if (param == null || Number.isNaN(param)) {
+				mod.command.message('Invalid preset number!');
 			}
 			else {
-				mod.command.message('Invalid preset number!');
+				applyPreset(Number(param));
 			}
 		},
 		race() {
