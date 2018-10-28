@@ -1,4 +1,11 @@
 {
-    "servers": ["https://raw.githubusercontent.com/gievepix/Surgeon/master/"],
-    "supportUrl": "https://discord.gg/maqBmJV"
+	"disableAutoUpdate": true,
+	"options": {
+		"niceName": "Surgeon",
+		"settingsVersion": 1,
+		"settingsFile": "presets.json",
+		"settingsMigrator": "setting_migration.js"
+	},
+	"servers": ["https://raw.githubusercontent.com/gievepix/surgeon/master/"],
+	"supportUrl": "https://discord.gg/dUNDDtw"
 }
