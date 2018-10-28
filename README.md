@@ -1,5 +1,5 @@
 ## Surgeon
-A tera-proxy module that is able to change your character's appearance (race, gender, face slider and voice).
+A tera-proxy module that is able to change your character's appearance (race, gender, face slider).
 
 ### Usage
 Automatically loads your character(s) new look whenever you start the game.
