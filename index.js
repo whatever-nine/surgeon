@@ -209,9 +209,7 @@ module.exports = function surgeon(mod) {
 	}
 	
 	function getTemplate(race, gender, job) {
-		let cmodel = 10101 + (race * 200) + job;
-		cmodel += (gender == 1 ? 100 : 0);
-		return cmodel;
+		return (10101 + (race * 200) + job + (gender == 1 ? 100 : 0));
 	}
 	
 	function isCorrectTemplate(template, job) {
@@ -221,7 +219,7 @@ module.exports = function surgeon(mod) {
 			case 9:		// gunner
 				return ([10410, 10810, 11010].includes(template));
 			case 10:	// brawler
-				return ([10111, 10211].includes(template));
+				return ([10111, 10211, 11011].includes(template));
 			case 11:	// ninja
 				return (template == 11012);
 			case 12:	// Valkyrie
@@ -351,7 +349,7 @@ module.exports = function surgeon(mod) {
 				}
 			}
 		} else {
-			mod.command.message(`Invalid preset number!${num > mod.settings.presets.length ? 'Total count: ' + mod.settings.presets.length : ''}`);
+			mod.command.message(`Invalid preset number!${num > mod.settings.presets.length ? ' Total count: ' + mod.settings.presets.length : ''}`);
 		}
 	}
 	
