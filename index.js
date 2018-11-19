@@ -64,7 +64,7 @@ module.exports = function surgeon(mod) {
 					if (mod.settings.characters[character.name]) {
 						let preset = mod.settings.presets[mod.settings.characters[character.name] - 1];
 						let template = getTemplate(preset.race, preset.gender, character.class);
-						if (isCorrectTemplate(template, character.class)) {
+						if (isCorrectTemplate(template)) {
 							character.race = preset.race;
 							character.gender = preset.gender;
 							character.appearance = Number(preset.appearance);
@@ -156,7 +156,7 @@ module.exports = function surgeon(mod) {
 	mod.hook('S_USER_EXTERNAL_CHANGE', 6, { order: 999, filter: { fake: null }}, event => {
 		if (event.gameId.equals(userLoginInfo.gameId) && mod.settings.characters[userLoginInfo.name]) {
 			updateUserCostumes(event);
-			applyPreset(mod.settings.characters[userLoginInfo.name]);
+			applyPreset(mod.settings.characters[userLoginInfo.name], false);
 		}
  	});
 	
@@ -194,6 +194,7 @@ module.exports = function surgeon(mod) {
 				details: Buffer.from(currentPreset.details, 'hex')
 			});
 
+			// TODO: do smth with this shit
 			allIncomingHook = mod.hook('*', 'raw', { order: 2, filter: { incoming: true }}, () => {
 				return false;
 			});
@@ -212,7 +213,8 @@ module.exports = function surgeon(mod) {
 		return (10101 + (race * 200) + job + (gender == 1 ? 100 : 0));
 	}
 	
-	function isCorrectTemplate(template, job) {
+	function isCorrectTemplate(template) {
+		let job = (template % 100) - 1;
 		switch (job) {	// 101XX/102XX Human, 103xx/104xx High Elf, 105x/106xx Aman, 107xx/108xx Castanic, 109xx/110xx Popori/Elin, 111xx Baraka
 			case 8:		// reaper
 				return (template == 11009);
@@ -285,7 +287,7 @@ module.exports = function surgeon(mod) {
 		}
 	}
 
-	function applyPreset(num) {
+	function applyPreset(num, isDelete) {
 		if (num <= mod.settings.presets.length && num >= 0) {
 			let prevPreset = mod.settings.characters[userLoginInfo.name];
 			if (num == 0) {		// revert appearance to original
@@ -311,10 +313,14 @@ module.exports = function surgeon(mod) {
 				};
 				Object.assign(e, usercostumes);
 				mod.send('S_UNICAST_TRANSFORM_DATA', 3, e);
-				mod.command.message('Appearance reverted.');
+				if (isDelete) {
+					mod.command.message(`Current preset (${prevPreset}) deleted, appearance reverted to original.`);
+				} else {
+					mod.command.message('Appearance reverted to original.');
+				}
 			} else {			// load preset
 				let template = getTemplate(mod.settings.presets[num - 1].race, mod.settings.presets[num - 1].gender, userLoginInfo.class);
-				if (isCorrectTemplate(template, userLoginInfo.class)) {		// if chosen preset can be applied to current character
+				if (isCorrectTemplate(template)) {		// if chosen preset can be applied to current character
 					mod.settings.characters[userLoginInfo.name] = num;
 					currentPreset = mod.settings.presets[num - 1];
 					let e = {
@@ -334,7 +340,7 @@ module.exports = function surgeon(mod) {
 					mod.send('S_UNICAST_TRANSFORM_DATA', 3, e);
 					if (!prevPreset) {
 						// updateUserCostumes(usercostumes);
-						// applyPreset(mod.settings.characters[userLoginInfo.name] - 1, marrow);
+						// applyPreset(mod.settings.characters[userLoginInfo.name] - 1, false);
 						e = {
 							gameId: userLoginInfo.gameId,
 						};
@@ -342,7 +348,7 @@ module.exports = function surgeon(mod) {
 						mod.send('S_USER_EXTERNAL_CHANGE', 6, e);
 					}
 					if (prevPreset != num) {
-						mod.command.message(`Using preset ${num}`);
+						mod.command.message(`Using preset ${num}.`);
 					}
 				} else {
 					mod.command.message(`Unable to apply this preset (${presetToString(currentPreset.race, currentPreset.gender)}) to ${jobToString(userLoginInfo.class)}!`);
@@ -405,8 +411,11 @@ module.exports = function surgeon(mod) {
 				mod.command.message('Invalid preset number!');
 			}
 			else {
-				applyPreset(Number(param));
+				applyPreset(Number(param), false);
 			}
+		},
+		reset() {
+			applyPreset(0, false);
 		},
 		race() {
 			newpreset = false;
@@ -455,16 +464,35 @@ module.exports = function surgeon(mod) {
 				mod.command.message('This preset is already saved.');
 			}
 		},
+		delete() {
+			let num = mod.settings.characters[userLoginInfo.name];
+			console.log(`characters[${userLoginInfo.name}] = ${mod.settings.characters[userLoginInfo.name]}`);
+			if (num) {
+				applyPreset(0, true);
+				mod.settings.characters[userLoginInfo.name] = 0;
+				mod.settings.presets.splice(num - 1, 1);
+				for (let name in mod.settings.characters) {
+					console.log(`${name}: ${mod.settings.characters[name]}`);
+					if (mod.settings.characters[name] >= num) {
+						console.log(`${mod.settings.characters[name]} -> ${mod.settings.characters[name] - 1}`);
+						mod.settings.characters[name]--;
+					}
+				}
+			}
+		},
 		$none() {
 			mod.command.message('Commands:');
-			mod.command.message('"surgeon load [x]" - load your saved preset slot x, 0 - revert to original.');
-			mod.command.message('"surgeon app" - Emulates an appearance change; edits current preset, or creates new preset if used with your true appearance.');
-			mod.command.message('"surgeon gender" - Emulates a gender change. Will cause desyncs when using skills unless the racial skill animation is almost identical.');
-			mod.command.message('"surgeon race" - Emulates a race change. Will cause desyncs when using skills unless the racial skill animation is almost identical.');
-			mod.command.message('"surgeon new app" - Does the same as "surgeon app"; creates new preset.');
-			mod.command.message('"surgeon new gender" - Does the same as "surgeon gender"; creates new preset.');
-			mod.command.message('"surgeon new race" - Does the same as "surgeon race"; creates new preset.');
-			mod.command.message('"surgeon save" - saves current character\'s appearance into preset.');
+			mod.command.message('"surg" - shows this list;');
+			mod.command.message('"surg save" - saves current character\'s appearance into preset;');
+			mod.command.message('"surg load x" - loads preset with the number x (0 - revert to original);');
+			mod.command.message('"surg reset" - same as "surg load 0";');
+			mod.command.message('"surg delete" - deletes current preset (and reverts appearance to original);');
+			mod.command.message('"surg app" - emulates an appearance change; edits current preset, or creates new one if used with your original appearance;');
+			mod.command.message('"surg gender" - emulates a gender change;');
+			mod.command.message('"surg race" - emulates a race change;');
+			mod.command.message('"surg new app" - emulates an appearance change, creates new preset;');
+			mod.command.message('"surg new gender" - emulates a gender change, creates new preset;');
+			mod.command.message('"surg new race" - emulates a race change, creates new preset.');
 		},
 		$default() {
 			mod.command.message('Invalid command!');
