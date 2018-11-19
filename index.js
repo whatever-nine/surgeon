@@ -464,22 +464,40 @@ module.exports = function surgeon(mod) {
 				mod.command.message('This preset is already saved.');
 			}
 		},
-		delete() {
-			let num = mod.settings.characters[userLoginInfo.name];
-			console.log(`characters[${userLoginInfo.name}] = ${mod.settings.characters[userLoginInfo.name]}`);
-			if (num) {
-				applyPreset(0, true);
-				mod.settings.characters[userLoginInfo.name] = 0;
-				mod.settings.presets.splice(num - 1, 1);
-				for (let name in mod.settings.characters) {
-					console.log(`${name}: ${mod.settings.characters[name]}`);
-					if (mod.settings.characters[name] >= num) {
-						console.log(`${mod.settings.characters[name]} -> ${mod.settings.characters[name] - 1}`);
-						mod.settings.characters[name]--;
+		delete(param) {		// need testing
+			if (Number.isNaN(param)) {
+				mod.command.message('Invalid preset number!');
+			} else {
+				let num = (param == null ? mod.settings.characters[userLoginInfo.name] : Number(param));
+				if (num > 0 && num <= mod.settings.presets.length) {
+					if (num == mod.settings.characters[userLoginInfo.name]) {		// if param was null, or param == current preset number - revert current character appearance
+						applyPreset(0, true);
+						mod.settings.characters[userLoginInfo.name] = 0;
 					}
+					mod.settings.presets.splice(num - 1, 1);
+					for (let name in mod.settings.characters) {
+						if (mod.settings.characters[name] >= num) {
+							mod.settings.characters[name]--;
+						}
+					}
+				} else {
+					mod.command.message('Invalid preset number!');
 				}
 			}
 		},
+		swap(num) {			// untested
+			let tmp = mod.settings.characters[userLoginInfo.name];
+			if (tmp && num) {
+				let preset = mod.settings.presets[tmp];
+				mod.settings.presets[tmp] = mod.settings.presets[num];
+				mod.settings.presets[num] = preset;
+				for (let name in mod.settings.characters) {
+					if (mod.settings.characters[name] == num) mod.settings.characters[name] = tmp;
+					if (mod.settings.characters[name] == tmp) mod.settings.characters[name] = num;
+				}
+			}
+		},
+		//swap(num1, num2) {},
 		$none() {
 			mod.command.message('Commands:');
 			mod.command.message('"surg" - shows this list;');
