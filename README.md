@@ -9,16 +9,13 @@ This serves as the script's command interface.
 List of commands:
 
 * `surg` - shows all commands listed below;
-* `surg save` - saves current character's appearance into preset;
-* `surg load x` - loads preset with the number `x` (0 - revert to original);
+* `surg save` - save current character's appearance into preset;
+* `surg load x` - load preset with specified number (0 - revert to original);
 * `surg reset` - same as `surg load 0`;
-* `surg delete` - deletes current preset (and reverts appearance to original);
-* `surg app` - emulates an appearance change; edits current preset, or creates new one if used with your original appearance;
-* `surg gender` - emulates a gender change;
-* `surg race` - emulates a race change;
-* `surg new app` - emulates an appearance change, creates new preset;
-* `surg new gender` - emulates a gender change, creates new preset;
-* `surg new race` - emulates a race change, creates new preset.
+* `surg delete x` - delete preset with specified number (if number not specified - current preset will be deleted);
+* `surg swap x` - swap current preset and preset with specified number (yea manual sorting);
+* `surg app|gender|race` - emulate an appearance/gender/race change for current preset (create new one if used with your original appearance);
+* `surg new app|gender|race` - emulate an appearance/gender/race change, create new preset.
 
 ### Safety
 All operation from this module are clientside, meaning **only you** can see the effects.
