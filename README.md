@@ -14,7 +14,7 @@ Automatically loads your character(s) new look whenever you start the game.
 * `surg swap x` - swap current preset and preset with specified number (yea manual sorting);
 
 ### Editing current preset
-* `surg app` - emulate an appearance change; edits current preset, or creates new one if used with your original appearance;
+* `surg app` - emulate an appearance change;
 * `surg gender` - emulate a gender change;
 * `surg race` - emulate a race change;
 * `surg skin x` - change your character's skin tone;
