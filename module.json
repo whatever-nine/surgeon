@@ -1,11 +1,14 @@
 {
 	"disableAutoUpdate": false,
+	"name": "surgeon",
+	"author": "gievepix",
+	"description": "A tera-proxy module that is able to change your character's appearance (race, gender, face slider, etc).",
+	"version": "2.0",
 	"options": {
 		"niceName": "Surgeon",
-		"settingsVersion": 1,
+		"settingsVersion": 2,
 		"settingsFile": "presets.json",
 		"settingsMigrator": "settings_migration.js"
 	},
-	"servers": ["https://raw.githubusercontent.com/gievepix/surgeon/master/"],
-	"supportUrl": "https://discord.gg/dUNDDtw"
+	"servers": ["https://raw.githubusercontent.com/gievepix/surgeon/master/"]
 }

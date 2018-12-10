@@ -24,16 +24,30 @@ function MigrateSettings(from_ver, to_ver, settings) {
         // a switch for each version step that upgrades to the next version. This enables us to
         // upgrade from any version to the latest version without additional effort!
         switch (to_ver) {
-            /*case 2:
+            case 2:
                 // Upgrade from v1 to v2
                 // EXAMPLE: in v1, colors were specified like "reset_font_color": "green", but we support arbitrary hex colors now!
-                switch (settings.reset_font_color) {
+				for (let i = 0; i < settings.presets.length; i++) {
+					let appearance = BigInt(settings.presets[i].appearance);
+					settings.presets[i].unk1 = Number(appearance & 0xffn);
+					settings.presets[i].skinColor = Number(appearance >> 8n & 0xffn);
+					settings.presets[i].faceStyle = Number(appearance >> 16n & 0xffn);
+					settings.presets[i].faceDecal = Number(appearance >> 24n & 0xffn);
+					settings.presets[i].hairStyle = Number(appearance >> 32n & 0xffn);
+					settings.presets[i].hairColor = Number(appearance >> 40n & 0xffn);
+					settings.presets[i].voice = Number(appearance >> 48n & 0xffn);
+					settings.presets[i].tattoos = Number(appearance >> 56n & 0xffn);
+					delete settings.presets[i].appearance;
+				}
+				/*
+                switch (settings.preset) {
                     case "red": settings.reset_font_color = "#FF0000"; break;
                     case "green": settings.reset_font_color = "#00FF00"; break;
                     case "blue": settings.reset_font_color = "#0000FF"; break;
                     default: settings.reset_font_color = DefaultSettings.reset_font_color; break;
-                }
+                }*/
                 break;
+			/*
             case 3:
                 // upgrade from v2 to v3
                 // EXAMPLE: setting "random_color" was removed (note that it's also absent from DefaultSettings, which should always correspond to the latest version!)
