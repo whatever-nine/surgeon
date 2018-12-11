@@ -10,7 +10,7 @@ module.exports = function surgeon(mod) {
 		charId,
 		loginMsg = '';
 
-	mod.hook('S_LOGIN', 10, { order: 999 }, event => {
+	mod.hook('S_LOGIN', 10, event => {
 		isLogin = true;
 		marrow = false;
 		inSurgeonRoom = false;
@@ -21,20 +21,20 @@ module.exports = function surgeon(mod) {
 			serverId: event.serverId,
 			playerId: event.playerId,
 			name: event.name,
-			details: event.details.toString('hex'),
-			shape: event.shape,
 			race: Math.floor((event.templateId - 10101) / 200),
 			gender: Math.floor((event.templateId - 10101) / 100) % 2,
-			class: (event.templateId % 100) - 1,
+			job: (event.templateId % 100) - 1,
 			appearance: appearanceToObj(event.appearance),
+			details: event.details.toString('hex'),
+			shape: event.shape
 		};
 		if (mod.settings.characters[event.name]) {
 			let preset = mod.settings.presets[mod.settings.characters[event.name] - 1];
-			let template = getTemplate(preset.race, preset.gender, userLoginInfo.class);
+			let template = getTemplate(preset.race, preset.gender, userLoginInfo.job);
 			if (isCorrectTemplate(template)) {
 				Object.assign(currentPreset, preset);
 				loginMsg = `Current preset - ${mod.settings.characters[event.name]}.`;
-				event.templateId = getTemplate(currentPreset.race, currentPreset.gender, userLoginInfo.class);
+				event.templateId = getTemplate(currentPreset.race, currentPreset.gender, userLoginInfo.job);
 				event.appearance = getAppearance(currentPreset);
 				event.details = Buffer.from(currentPreset.details, 'hex');
 				return true;
@@ -45,7 +45,7 @@ module.exports = function surgeon(mod) {
 					gender: userLoginInfo.gender
 				};
 				Object.assign(currentPreset, userLoginInfo.appearance, { details: userLoginInfo.details });
-				loginMsg = `Unable to apply preset ${mod.settings.characters[event.name]} (${presetToString(preset.race, preset.gender)}) to ${jobToString(userLoginInfo.class)}, using original appearance.`;
+				loginMsg = `Unable to apply preset ${mod.settings.characters[event.name]} (${presetToString(preset.race, preset.gender)}) to ${jobToString(userLoginInfo.job)}, using original appearance.`;
 			}
 		} else {
 			currentPreset = {
@@ -150,7 +150,7 @@ module.exports = function surgeon(mod) {
 		if (event.gameId === userLoginInfo.gameId) {
 			marrow = event.unk1;
 			// userLoginInfo.shape = event.shape;
-			event.templateId = getTemplate(currentPreset.race, currentPreset.gender, userLoginInfo.class);
+			event.templateId = getTemplate(currentPreset.race, currentPreset.gender, userLoginInfo.job);
 			event.appearance = getAppearance(currentPreset);
 			event.details = Buffer.from(currentPreset.details, 'hex');
 			Object.assign(userCostumes, event);
@@ -212,7 +212,7 @@ module.exports = function surgeon(mod) {
 				playerId: userLoginInfo.playerId,
 				gender: currentPreset.gender,
 				race: currentPreset.race,
-				class: userLoginInfo.class,
+				class: userLoginInfo.job,
 				weapon: (userCostumes.weapon ? userCostumes.weapon : userCostumes.weaponModel),
 				chest: userCostumes.body,
 				gloves: userCostumes.hand,
@@ -329,7 +329,7 @@ module.exports = function surgeon(mod) {
 		} else {			// load preset
 			let preset = {};
 			Object.assign(preset, mod.settings.presets[num - 1]);
-			template = getTemplate(preset.race, preset.gender, userLoginInfo.class);
+			template = getTemplate(preset.race, preset.gender, userLoginInfo.job);
 			if (isCorrectTemplate(template)) {		// if chosen preset can be applied to current character
 				mod.settings.characters[userLoginInfo.name] = num;
 				Object.assign(currentPreset, preset);
@@ -369,7 +369,7 @@ module.exports = function surgeon(mod) {
 			mod.command.message((num == 0 ? 'Appearance reverted to original.' : `Using preset ${num}.`));
 		} else {
 			let preset = mod.settings.presets[num - 1];
-			mod.command.message(`Unable to apply this preset (${presetToString(preset.race, preset.gender)}) to ${jobToString(userLoginInfo.class)}!`);
+			mod.command.message(`Unable to apply this preset (${presetToString(preset.race, preset.gender)}) to ${jobToString(userLoginInfo.job)}!`);
 		}
 	}
 
@@ -508,7 +508,7 @@ module.exports = function surgeon(mod) {
 			type: 0,
 			unk1: marrow,
 			unk2: true,
-			templateId: getTemplate(preset.race, preset.gender, userLoginInfo.class),
+			templateId: getTemplate(preset.race, preset.gender, userLoginInfo.job),
 			appearance: getAppearance(preset),
 			appearance2: 100,
 			details: Buffer.from(preset.details, 'hex'),
