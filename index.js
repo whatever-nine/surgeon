@@ -21,11 +21,6 @@ module.exports = function surgeon(mod) {
 			serverId: event.serverId,
 			playerId: event.playerId,
 			name: event.name,
-			weapon: event.weapon,
-			body: event.body,
-			hand: event.hand,
-			feet: event.feet,
-			underwear: event.underwear,
 			details: event.details.toString('hex'),
 			shape: event.shape,
 			race: Math.floor((event.templateId - 10101) / 200),
@@ -151,7 +146,7 @@ module.exports = function surgeon(mod) {
 		}
 	});
 
-	mod.hook('S_UNICAST_TRANSFORM_DATA', 4, { order: -1, filter: { fake: null }}, event => {
+	mod.hook('S_UNICAST_TRANSFORM_DATA', 4, { filter: { fake: null }}, event => {
 		if (event.gameId === userLoginInfo.gameId) {
 			marrow = event.unk1;
 			// userLoginInfo.shape = event.shape;
@@ -218,10 +213,10 @@ module.exports = function surgeon(mod) {
 				gender: currentPreset.gender,
 				race: currentPreset.race,
 				class: userLoginInfo.class,
-				weapon: userLoginInfo.weapon,
-				chest: userLoginInfo.body,
-				gloves: userLoginInfo.hand,
-				boots: userLoginInfo.feet,
+				weapon: (userCostumes.weapon ? userCostumes.weapon : userCostumes.weaponModel),
+				chest: userCostumes.body,
+				gloves: userCostumes.hand,
+				boots: userCostumes.feet,
 				appearance: (type == 3 ? getAppearance(currentPreset) : 0),
 				weaponEnchantment: 0,
 				item: itemId,
@@ -330,20 +325,7 @@ module.exports = function surgeon(mod) {
 				gender: userLoginInfo.gender
 			};
 			Object.assign(currentPreset, userLoginInfo.appearance, { details: userLoginInfo.details });
-				// race: userLoginInfo.race,
-				// gender: userLoginInfo.gender,
-				// unk1: userLoginInfo.appearance.unk1,
-				// skinColor: userLoginInfo.appearance.skinColor,
-				// faceStyle: userLoginInfo.appearance.faceStyle,
-				// faceDecal: userLoginInfo.appearance.faceDecal,
-				// hairStyle: userLoginInfo.appearance.hairStyle,
-				// hairColor: userLoginInfo.appearance.hairColor,
-				// voice: userLoginInfo.appearance.voice,
-				// tattoos: userLoginInfo.appearance.tattoos,
-				// details: userLoginInfo.details
-			// };
 			template = userLoginInfo.templateId;
-			// console.log(currentPreset);
 		} else {			// load preset
 			let preset = {};
 			Object.assign(preset, mod.settings.presets[num - 1]);
