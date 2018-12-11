@@ -5,10 +5,13 @@ module.exports = function surgeon(mod) {
 		inSurgeonRoom = false,
 		newPreset = false,
 		marrow = false,
-		userListHook = null,
-		charId;
+		isLogin = false,
+		allIncomingHook = null,
+		charId,
+		loginMsg = '';
 
 	mod.hook('S_LOGIN', 10, { order: 999 }, event => {
+		isLogin = true;
 		marrow = false;
 		inSurgeonRoom = false;
 		Object.assign(userCostumes, event);
@@ -30,7 +33,6 @@ module.exports = function surgeon(mod) {
 			class: (event.templateId % 100) - 1,
 			appearance: appearanceToObj(event.appearance),
 		};
-		let loginMsg;
 		if (mod.settings.characters[event.name]) {
 			let preset = mod.settings.presets[mod.settings.characters[event.name] - 1];
 			let template = getTemplate(preset.race, preset.gender, userLoginInfo.class);
@@ -40,6 +42,7 @@ module.exports = function surgeon(mod) {
 				event.templateId = getTemplate(currentPreset.race, currentPreset.gender, userLoginInfo.class);
 				event.appearance = getAppearance(currentPreset);
 				event.details = Buffer.from(currentPreset.details, 'hex');
+				return true;
 			} else {
 				mod.settings.characters[event.name] = 0;
 				currentPreset = {
@@ -57,11 +60,6 @@ module.exports = function surgeon(mod) {
 			Object.assign(currentPreset, userLoginInfo.appearance, { details: userLoginInfo.details });
 			loginMsg = 'Original appearance.';
 		}
-		mod.hookOnce('S_SPAWN_ME', 'raw', () => {
-			mod.command.message(loginMsg);
-			// console.log(currentPreset);
-		});
-		return true;
 	});
 
 	mod.hook('S_GET_USER_LIST', 14, { order: 1 }, event => {
@@ -170,6 +168,13 @@ module.exports = function surgeon(mod) {
 			Object.assign(userCostumes, event);
 		}
  	});
+	
+	mod.hook('S_SPAWN_ME', 'raw', () => {
+		if (isLogin) {
+			mod.command.message(loginMsg);
+			isLogin = false;
+		}
+	});
 	
 	function appearanceToObj(appearance) {
 		let obj = {
