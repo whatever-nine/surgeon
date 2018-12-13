@@ -1,16 +1,18 @@
+const { Customize } = require('tera-data-parser').types;
+
 module.exports = function surgeon(mod) {
 	let userCostumes = {},
 		userLoginInfo = {},
-		currentPreset = {},
 		inSurgeonRoom = false,
 		newPreset = false,
 		marrow = false,
 		isLogin = false,
 		allIncomingHook = null,
 		charId,
-		loginMsg = '';
+		loginMsg = '',
+		currentPreset = {};
 
-	mod.hook('S_LOGIN', 10, event => {
+	mod.hook('S_LOGIN', 12, event => {
 		isLogin = true;
 		marrow = false;
 		inSurgeonRoom = false;
@@ -24,40 +26,54 @@ module.exports = function surgeon(mod) {
 			race: Math.floor((event.templateId - 10101) / 200),
 			gender: Math.floor((event.templateId - 10101) / 100) % 2,
 			job: (event.templateId % 100) - 1,
-			appearance: appearanceToObj(event.appearance),
+			appearance: (new Customize(event.appearance)),
 			details: event.details.toString('hex'),
-			shape: event.shape
+			shape: event.shape.toString('hex')
 		};
 		if (mod.settings.characters[event.name]) {
-			let preset = mod.settings.presets[mod.settings.characters[event.name] - 1];
+			let preset = Object.assign({}, mod.settings.presets[mod.settings.characters[event.name] - 1]);
 			let template = getTemplate(preset.race, preset.gender, userLoginInfo.job);
 			if (isCorrectTemplate(template)) {
-				Object.assign(currentPreset, preset);
 				loginMsg = `Current preset - ${mod.settings.characters[event.name]}.`;
-				event.templateId = getTemplate(currentPreset.race, currentPreset.gender, userLoginInfo.job);
-				event.appearance = getAppearance(currentPreset);
+				currentPreset = {
+					race:		preset.race,
+					gender:		preset.gender,
+					template:	template,
+					appearance:	(new Customize(preset.appearance)),
+					details:	preset.details,
+					shape:		preset.shape
+				};
+				event.templateId = currentPreset.template;
+				event.appearance = new Customize(currentPreset.appearance);
 				event.details = Buffer.from(currentPreset.details, 'hex');
+				event.shape = Buffer.from(currentPreset.shape, 'hex');
 				return true;
 			} else {
 				mod.settings.characters[event.name] = 0;
 				currentPreset = {
-					race: userLoginInfo.race,
-					gender: userLoginInfo.gender
+					race: 		userLoginInfo.race,
+					gender:		userLoginInfo.gender,
+					template:	userLoginInfo.templateId,
+					appearance:	(new Customize(userLoginInfo.appearance)),
+					details: 	userLoginInfo.details,
+					shape: 		userLoginInfo.shape
 				};
-				Object.assign(currentPreset, userLoginInfo.appearance, { details: userLoginInfo.details });
 				loginMsg = `Unable to apply preset ${mod.settings.characters[event.name]} (${presetToString(preset.race, preset.gender)}) to ${jobToString(userLoginInfo.job)}, using original appearance.`;
 			}
 		} else {
 			currentPreset = {
-				race: userLoginInfo.race,
-				gender: userLoginInfo.gender
+				race:		userLoginInfo.race,
+				gender: 	userLoginInfo.gender,
+				template:	userLoginInfo.templateId,
+				appearance:	(new Customize(userLoginInfo.appearance)),
+				details:	userLoginInfo.details,
+				shape:		userLoginInfo.shape
 			};
-			Object.assign(currentPreset, userLoginInfo.appearance, { details: userLoginInfo.details });
 			loginMsg = 'Original appearance.';
 		}
 	});
 
-	mod.hook('S_GET_USER_LIST', 14, { order: 1 }, event => {
+	mod.hook('S_GET_USER_LIST', 15, { order: 1 }, event => {
 		if (inSurgeonRoom) {
 			if (allIncomingHook) mod.unhook(allIncomingHook);
 			event.characters.forEach(character => {
@@ -69,18 +85,26 @@ module.exports = function surgeon(mod) {
 				if (mod.settings.characters[character.name] == null) {
 					mod.settings.characters[character.name] = 0;
 				} else {
-					if (mod.settings.characters[character.name]) {
+					let num = mod.settings.characters[character.name];
+					if (num > 0 && num <= mod.settings.presets.length) {
 						let preset = mod.settings.presets[mod.settings.characters[character.name] - 1];
 						let template = getTemplate(preset.race, preset.gender, character.class);
 						if (isCorrectTemplate(template)) {
 							character.race = preset.race;
 							character.gender = preset.gender;
-							character.appearance = getAppearance(preset);
+							character.appearance = new Customize(preset.appearance);
 							character.details = Buffer.from(preset.details, 'hex');
+							if (preset.shape == '') {
+								mod.settings.presets[mod.settings.characters[character.name] - 1].shape = character.shape.toString('hex');
+							} else {
+								character.shape = Buffer.from(preset.shape, 'hex');
+							}
 						} else {
 							console.log(`Unable to apply preset ${mod.settings.characters[character.name]} (${presetToString(preset.race, preset.gender)}) to character ${character.name} (${jobToString(character.class)})!`);
 							mod.settings.characters[character.name] = 0;
 						}
+					} else {
+						mod.settings.characters[character.name] = 0;
 					}
 				}
 			});
@@ -110,21 +134,23 @@ module.exports = function surgeon(mod) {
 		}
 	});
 
-	mod.hook('C_COMMIT_CHANGE_USER_APPEARANCE', 1, event => {
+	mod.hook('C_COMMIT_CHANGE_USER_APPEARANCE', 2, event => {
 		if (inSurgeonRoom) {
 			inSurgeonRoom = false;
 			mod.send('S_END_CHANGE_USER_APPEARANCE', 1, { ok: 1, unk: 0 });
 			let preset = {
-				race: event.race,
-				gender: event.gender
+				race:		event.race,
+				gender:		event.gender,
+				appearance:	(new Customize(event.appearance)),
+				details:	event.details.toString('hex'),
+				shape:		event.shape.toString('hex')
 			};
-			Object.assign(preset, appearanceToObj(event.appearance), { details: event.details.toString('hex') });
 			if (newPreset || !mod.settings.characters[userLoginInfo.name]) {
 				newPreset = false;
 				mod.settings.presets.push(preset);
 				mod.settings.characters[userLoginInfo.name] = mod.settings.presets.length;
 			} else {
-				mod.settings.presets[mod.settings.characters[userLoginInfo.name] - 1] = preset;
+				Object.assign(mod.settings.presets[mod.settings.characters[userLoginInfo.name] - 1], preset);
 			}
 
 			if (charId != null) {
@@ -146,19 +172,21 @@ module.exports = function surgeon(mod) {
 		}
 	});
 
-	mod.hook('S_UNICAST_TRANSFORM_DATA', 4, { filter: { fake: null }}, event => {
-		if (event.gameId === userLoginInfo.gameId) {
-			marrow = event.unk1;
-			// userLoginInfo.shape = event.shape;
-			event.templateId = getTemplate(currentPreset.race, currentPreset.gender, userLoginInfo.job);
-			event.appearance = getAppearance(currentPreset);
+	mod.hook('S_UNICAST_TRANSFORM_DATA', 5, { filter: { fake: null }}, (event, fake) => {
+		if (event.gameId === userLoginInfo.gameId && !event.type && !event.isAppear) {
+			if (!fake) {
+				marrow = event.isExpandTransform;
+				Object.assign(userCostumes, event);
+			}
+			event.templateId = currentPreset.template;
+			event.appearance = new Customize(currentPreset.appearance);
 			event.details = Buffer.from(currentPreset.details, 'hex');
-			Object.assign(userCostumes, event);
+			event.shape = Buffer.from(currentPreset.shape, 'hex');
 			return true;
 		}
  	});
 
-	mod.hook('S_USER_EXTERNAL_CHANGE', 6, { order: 999, filter: { fake: null }}, event => {
+	mod.hook('S_USER_EXTERNAL_CHANGE', 7, { order: 999, filter: { fake: null }}, event => {
 		if (event.gameId === userLoginInfo.gameId) {
 			Object.assign(userCostumes, event);
 		}
@@ -171,27 +199,10 @@ module.exports = function surgeon(mod) {
 		}
 	});
 	
-	function appearanceToObj(appearance) {
-		let obj = {
-			unk1: Number(appearance & 0xffn),
-			skinColor: Number(appearance >> 8n & 0xffn),
-			faceStyle: Number(appearance >> 16n & 0xffn),
-			faceDecal: Number(appearance >> 24n & 0xffn),
-			hairStyle: Number(appearance >> 32n & 0xffn),
-			hairColor: Number(appearance >> 40n & 0xffn),
-			voice: Number(appearance >> 48n & 0xffn),
-			tattoos: Number(appearance >> 56n & 0xffn)
-		};
-		return obj;
-	}
-	
-	function getAppearance(obj) {
-		return (BigInt(obj.tattoos) << 56n) + (BigInt(obj.voice) << 48n) + (BigInt(obj.hairColor) << 40n) + (BigInt(obj.hairStyle) << 32n) + (BigInt(obj.faceDecal) << 24n) + (BigInt(obj.faceStyle) << 16n) + (BigInt(obj.skinColor) << 8n) + BigInt(obj.unk1);
-	}
-	
 	function surgeonRoom(type, isNewPreset) {
 		newPreset = isNewPreset;
 		let itemId;
+		let preset = Object.assign({}, mod.settings.presets[mod.settings.characters[userLoginInfo.name] - 1]);
 		switch (type) {
 			case 1: itemId = 168011; break;	// race
 			case 2: itemId = 168012; break;	// gender
@@ -199,7 +210,7 @@ module.exports = function surgeon(mod) {
 			default: console.log(`surgeonRoom(type = ${type})`); return;
 		}
 
-		if (type == 2 && (currentPreset.race == 4 || currentPreset.race == 5)) {
+		if (type == 2 && (preset.race == 4 || preset.race == 5)) {
 			mod.command.message('Popori, Elin and Baraka are ineligible for gender change.');
 			return;
 		}
@@ -207,20 +218,21 @@ module.exports = function surgeon(mod) {
 		mod.send('C_RETURN_TO_LOBBY', 1, {});
 		let prepareLobbyHook = mod.hookOnce('S_PREPARE_RETURN_TO_LOBBY', 1, () => {
 			inSurgeonRoom = true;
-			mod.send('S_START_CHANGE_USER_APPEARANCE', 2, {
+			mod.send('S_START_CHANGE_USER_APPEARANCE', 3, {
 				type: type,
 				playerId: userLoginInfo.playerId,
-				gender: currentPreset.gender,
-				race: currentPreset.race,
+				gender: preset.gender,
+				race: preset.race,
 				class: userLoginInfo.job,
 				weapon: (userCostumes.weapon ? userCostumes.weapon : userCostumes.weaponModel),
 				chest: userCostumes.body,
 				gloves: userCostumes.hand,
 				boots: userCostumes.feet,
-				appearance: (type == 3 ? getAppearance(currentPreset) : 0),
+				appearance: (type == 3 ? (new Customize(preset.appearance)) : 0n),
 				weaponEnchantment: 0,
 				item: itemId,
-				details: Buffer.from(currentPreset.details, 'hex')
+				details: Buffer.from(preset.details, 'hex'),
+				details2: Buffer.from(preset.shape, 'hex')
 			});
 
 			// TODO: do smth with this shit
@@ -239,7 +251,8 @@ module.exports = function surgeon(mod) {
 	}
 
 	function getTemplate(race, gender, job) {
-		return (10101 + (race * 200) + job + (gender == 1 ? 100 : 0));
+		// return (10101 + (race * 200) + job + (gender == 1 ? 100 : 0));
+		return (10101 + (race * 2 + gender) * 100 + job);
 	}
 
 	function isCorrectTemplate(template) {
@@ -317,41 +330,42 @@ module.exports = function surgeon(mod) {
 	}
 
 	function applyPreset(num) {
-		let template;
-		if (num == 0) {		// revert appearance to original
-			mod.settings.characters[userLoginInfo.name] = 0;
-			currentPreset = {
-				race: userLoginInfo.race,
-				gender: userLoginInfo.gender
-			};
-			Object.assign(currentPreset, userLoginInfo.appearance, { details: userLoginInfo.details });
-			template = userLoginInfo.templateId;
-		} else {			// load preset
-			let preset = {};
-			Object.assign(preset, mod.settings.presets[num - 1]);
-			template = getTemplate(preset.race, preset.gender, userLoginInfo.job);
+		if (num) {
+			let preset = Object.assign({}, mod.settings.presets[num - 1]);
+			let template = getTemplate(preset.race, preset.gender, userLoginInfo.job);
 			if (isCorrectTemplate(template)) {		// if chosen preset can be applied to current character
+				// newPreset = num;
 				mod.settings.characters[userLoginInfo.name] = num;
-				Object.assign(currentPreset, preset);
+				currentPreset = Object.assign({}, preset, { template: template });
 			} else {
 				return false;
 			}
+		} else {			
+			mod.settings.characters[userLoginInfo.name] = 0;
+			currentPreset = {
+				race:		userLoginInfo.race,
+				gender:		userLoginInfo.gender,
+				template:	userLoginInfo.templateId,
+				appearance:	(new Customize(userLoginInfo.appearance)),
+				details:	userLoginInfo.details,
+				shape:		userLoginInfo.shape
+			};
 		}
 		let e = {
 			serverId: userLoginInfo.serverId,
 			playerId: userLoginInfo.playerId,
 			gameId: userLoginInfo.gameId,
 			type: 0,
-			unk1: marrow,
-			unk2: true,
-			templateId: template,
-			appearance: getAppearance(currentPreset),
+			isExpandTransform: marrow,
+			isAppear: false,
+			templateId: currentPreset.template,
+			appearance: (new Customize(currentPreset.appearance)),	// no point in this, fake 'S_UNICAST_TRANSFORM_DATA' will contain original appearance anyway (weird bug)
 			appearance2: 100,
 			details: Buffer.from(currentPreset.details, 'hex'),
-			shape: userLoginInfo.shape
+			shape: Buffer.from(currentPreset.shape, 'hex')
 		};
 		Object.assign(e, userCostumes);
-		mod.send('S_UNICAST_TRANSFORM_DATA', 3, e);
+		mod.send('S_UNICAST_TRANSFORM_DATA', 5, e);
 		return true;
 	}
 
@@ -420,17 +434,11 @@ module.exports = function surgeon(mod) {
 	function savePreset() {
 		if (!mod.settings.characters[userLoginInfo.name]) {
 			mod.settings.presets.push({
-				race: userLoginInfo.race,
-				gender: userLoginInfo.gender,
-				unk1: userLoginInfo.appearance.unk1,
-				skinColor: userLoginInfo.appearance.skinColor,
-				faceStyle: userLoginInfo.appearance.faceStyle,
-				faceDecal: userLoginInfo.appearance.faceDecal,
-				hairStyle: userLoginInfo.appearance.hairStyle,
-				hairColor: userLoginInfo.appearance.hairColor,
-				voice: userLoginInfo.appearance.voice,
-				tattoos: userLoginInfo.appearance.tattoos,
-				details: userLoginInfo.details.toString('hex')
+				race:		userLoginInfo.race,
+				gender:		userLoginInfo.gender,
+				appearance:	(new Customize(userLoginInfo.appearance)),
+				details:	userLoginInfo.details.toString('hex'),
+				shape:		userLoginInfo.shape.toString('hex')
 			});
 			mod.command.message(`Preset saved at number ${mod.settings.presets.length}.`);
 		}
@@ -452,72 +460,84 @@ module.exports = function surgeon(mod) {
 		let field = Number(num1),
 			value = Number(num2) - 1,
 			changedField = '',
-			str = '',
-			preset = {};
-		
-		Object.assign(preset, currentPreset);
-		
+			str = '';
+
+		// let preset = Object.assign({}, currentPreset);
+		let currentNumber = mod.settings.characters[userLoginInfo.name];
+		let preset = {
+			race:		currentPreset.race,
+			gender:		currentPreset.gender,
+			template:	currentPreset.template,
+			appearance:	(new Customize(currentPreset.appearance)),
+			details:	currentPreset.details,
+			shape:		currentPreset.shape
+		};
+			
 		switch (field) {
 			case 0:		// dunno what's this
-				preset.unk1 = value;
+				currentPreset.appearance.unk = value;
 				break;
 			case 1:
-				preset.skinColor = value;
+				currentPreset.appearance.skinColor = value;
 				changedField = 'Skin color';
 				break;
 			case 2:
-				preset.faceStyle = value;
+				currentPreset.appearance.faceStyle = value;
 				changedField = 'Face type';
 				break;
 			case 3:
-				preset.faceDecal = value;
+				currentPreset.appearance.faceDecal = value;
 				changedField = 'Face decal';
 				break;
 			case 4:
-				preset.hairStyle = value;
+				currentPreset.appearance.hairStyle = value;
 				changedField = 'Hairstyle';
 				break;
 			case 5:
-				preset.hairColor = value;
+				currentPreset.appearance.hairColor = value;
 				changedField = 'Hair color';
 				break;
 			case 6:
-				preset.voice = value;
+				currentPreset.appearance.voice = value;
 				changedField = 'Voice';
 				break;
 			case 7:
-				preset.tattoos = value;
+				currentPreset.appearance.tattoos = value;
 				changedField = 'Tattoos';
 				break;
 		}
+
+		// currentPreset = Object.assign({}, preset);
 		
-		if (isNewPreset || !mod.settings.characters[userLoginInfo.name]) {
-			mod.settings.presets.push(preset);
+		
+		if (isNewPreset || !currentNumber) {
+			mod.settings.presets.push(currentPreset);
 			mod.settings.characters[userLoginInfo.name] = mod.settings.presets.length;
 			str = `new preset saved at number ${mod.settings.presets.length}`;
+			mod.settings.presets[currentNumber - 1] = Object.assign({}, preset);
 		} else {
-			mod.settings.presets[mod.settings.characters[userLoginInfo.name] - 1] = preset;
+			mod.settings.presets[currentNumber - 1] = Object.assign({}, currentPreset);
 			str = `preset ${mod.settings.characters[userLoginInfo.name]} updated`;
 		}
-		Object.assign(currentPreset, preset);
-		
+
 		let e = {
 			serverId: userLoginInfo.serverId,
 			playerId: userLoginInfo.playerId,
 			gameId: userLoginInfo.gameId,
 			type: 0,
-			unk1: marrow,
-			unk2: true,
-			templateId: getTemplate(preset.race, preset.gender, userLoginInfo.job),
-			appearance: getAppearance(preset),
+			isExpandTransform: marrow,
+			isAppear: false,
+			templateId: currentPreset.template,
+			appearance: (new Customize(currentPreset.appearance)),
 			appearance2: 100,
-			details: Buffer.from(preset.details, 'hex'),
-			shape: userLoginInfo.shape
+			details: Buffer.from(currentPreset.details, 'hex'),
+			shape: Buffer.from(currentPreset.shape, 'hex')
 		};
+		// console.log(e);
 		Object.assign(e, userCostumes);
-		mod.send('S_UNICAST_TRANSFORM_DATA', 3, e);
+		mod.send('S_UNICAST_TRANSFORM_DATA', 5, e);
+		
 		mod.command.message(`${changedField} changed to ${value + 1}, ${str}.`);
-		// currentPreset = {};
 	}
 
 	mod.command.add(['surgeon', 'surg'], {
@@ -613,7 +633,9 @@ module.exports = function surgeon(mod) {
 			mod.command.message('"surg delete x" - delete preset with specified number (if number not specified - current preset will be deleted);');
 			mod.command.message('"surg swap x" - swap current preset and preset with specified number (yea manual sorting);');
 			mod.command.message('"surg app|gender|race" - emulate an appearance/gender/race change for current preset (create new one if used with your original appearance);');
+			mod.command.message('"surg skin|face|decal|hair|haircolor|voice|tattoo x" - change your skin tone/face type/decal/hairstyle/hair color/voice/tattoos for current preset (create new one if used with your original appearance);');
 			mod.command.message('"surg new app|gender|race" - emulate an appearance/gender/race change, create new preset;');
+			mod.command.message('"surg new face|decal|hair|haircolor|voice|tattoo x" - change your skin tone/face type/decal/hairstyle/hair color/voice/tattoos for current preset, create new preset.');
 		},
 		$default() {
 			mod.command.message('Invalid command!');
