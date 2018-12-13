@@ -2,11 +2,11 @@
 	"disableAutoUpdate": false,
 	"name": "surgeon",
 	"author": "gievepix",
-	"description": "A tera-proxy module that is able to change your character's appearance (race, gender, face slider, etc).",
+	"description": "A tera-proxy module that is able to change your character's race, gender or appearance.",
 	"version": "2.0",
 	"options": {
 		"niceName": "Surgeon",
-		"settingsVersion": 2,
+		"settingsVersion": 3,
 		"settingsFile": "presets.json",
 		"settingsMigrator": "settings_migration.js"
 	},
