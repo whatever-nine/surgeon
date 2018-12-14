@@ -4,7 +4,7 @@ A tera-proxy module that is able to change your character's appearance (race, ge
 ## Usage
 Automatically loads your character(s) new look whenever you start the game.
 
-## List of commands:
+## List of commands
 
 ### Managing presets
 * `surg save` - save current character's appearance into preset;
