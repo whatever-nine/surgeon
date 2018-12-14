@@ -1,4 +1,48 @@
 const { Customize } = require('tera-data-parser').types;
+const keys = [
+	'gameId',
+	'weapon',
+	'body',
+	'hand',
+	'feet',
+	'underwear',
+	'head',
+	'face',
+	'weaponModel',
+	'bodyModel',
+	'handModel',
+	'feetModel',
+	'weaponDye',
+	'bodyDye',
+	'handDye',
+	'feetDye',
+	'underwearDye',
+	'styleBackDye',
+	'styleHeadDye',
+	'styleFaceDye',
+	'weaponEnchant',
+	'styleHead',
+	'styleFace',
+	'styleBack',
+	'styleWeapon',
+	'styleBody',
+	'styleFootprint',
+	'styleHeadScale',
+	'styleHeadRotation',
+	'styleHeadTranslation',
+	'styleHeadTranslationDebug',
+	'styleFaceScale',
+	'styleFaceRotation',
+	'styleFaceTranslation',
+	'styleFaceTranslationDebug',
+	'styleBackScale',
+	'styleBackRotation',
+	'styleBackTranslation',
+	'styleBackTranslationDebug',
+	'usedStyleHeadTransform',
+	'styleBodyDye',
+	'showStyle'
+];
 
 module.exports = function surgeon(mod) {
 	let userCostumes = {},
@@ -16,7 +60,7 @@ module.exports = function surgeon(mod) {
 		isLogin = true;
 		marrow = false;
 		inSurgeonRoom = false;
-		Object.assign(userCostumes, event);
+		updateUserCostumes(event);
 		userLoginInfo = {
 			templateId: event.templateId,
 			gameId: event.gameId,
@@ -172,12 +216,10 @@ module.exports = function surgeon(mod) {
 		}
 	});
 
-	mod.hook('S_UNICAST_TRANSFORM_DATA', 5, { filter: { fake: null }}, (event, fake) => {
-		if (event.gameId === userLoginInfo.gameId && !event.type && !event.isAppear) {
-			if (!fake) {
-				marrow = event.isExpandTransform;
-				Object.assign(userCostumes, event);
-			}
+	mod.hook('S_UNICAST_TRANSFORM_DATA', 5, event => {
+		if (event.gameId === userLoginInfo.gameId && mod.settings.characters[userLoginInfo.name] && !event.type && !event.isAppear) {
+			updateUserCostumes(event);
+			marrow = event.isExpandTransform;
 			event.templateId = currentPreset.template;
 			event.appearance = new Customize(currentPreset.appearance);
 			event.details = Buffer.from(currentPreset.details, 'hex');
@@ -188,7 +230,7 @@ module.exports = function surgeon(mod) {
 
 	mod.hook('S_USER_EXTERNAL_CHANGE', 7, { order: 999, filter: { fake: null }}, event => {
 		if (event.gameId === userLoginInfo.gameId) {
-			Object.assign(userCostumes, event);
+			updateUserCostumes(event);
 		}
  	});
 	
@@ -198,6 +240,12 @@ module.exports = function surgeon(mod) {
 			isLogin = false;
 		}
 	});
+	
+	function updateUserCostumes(event) {
+		for (let i in keys) {
+			userCostumes[keys[i]] = event[keys[i]];
+		}
+	}
 	
 	function surgeonRoom(type, isNewPreset) {
 		newPreset = isNewPreset;
@@ -277,22 +325,22 @@ module.exports = function surgeon(mod) {
 		let str = '';
 		switch (race) {
 			case 0:
-				str = "Human " + (gender == 0 ? "female" : "male");
+				str = 'Human ' + (gender == 0 ? 'female' : 'male');
 				break;
 			case 1:
-				str = "High Elf " + (gender == 0 ? "female" : "male");
+				str = 'High Elf ' + (gender == 0 ? 'female' : 'male');
 				break;
 			case 2:
-				str = "Aman " + (gender == 0 ? "female" : "male");
+				str = 'Aman ' + (gender == 0 ? 'female' : 'male');
 				break;
 			case 3:
-				str = "Castanic " + (gender == 0 ? "female" : "male");
+				str = 'Castanic ' + (gender == 0 ? 'female' : 'male');
 				break;
 			case 4:
-				str = (gender == 0 ? "Popori" : "Elin");
+				str = (gender == 0 ? 'Popori' : 'Elin');
 				break;
 			case 5:
-				str = "Baraka";
+				str = 'Baraka';
 				break;
 		}
 		return str;
@@ -301,31 +349,31 @@ module.exports = function surgeon(mod) {
 	function jobToString(job) {
 		switch (job) {
 			case 0:
-				return "Warrior";
+				return 'Warrior';
 			case 1:
-				return "Lancer";
+				return 'Lancer';
 			case 2:
-				return "Slayer";
+				return 'Slayer';
 			case 3:
-				return "Berserker";
+				return 'Berserker';
 			case 4:
-				return "Sorcerer";
+				return 'Sorcerer';
 			case 5:
-				return "Archer";
+				return 'Archer';
 			case 6:
-				return "Priest";
+				return 'Priest';
 			case 7:
-				return "Mystic";
+				return 'Mystic';
 			case 8:
-				return "Reaper";
+				return 'Reaper';
 			case 9:
-				return "Gunner";
+				return 'Gunner';
 			case 10:
-				return "Brawler";
+				return 'Brawler';
 			case 11:
-				return "Ninja";
+				return 'Ninja';
 			case 12:
-				return "Valkyrie";
+				return 'Valkyrie';
 		}
 	}
 
@@ -461,8 +509,7 @@ module.exports = function surgeon(mod) {
 			value = Number(num2) - 1,
 			changedField = '',
 			str = '';
-
-		// let preset = Object.assign({}, currentPreset);
+			
 		let currentNumber = mod.settings.characters[userLoginInfo.name];
 		let preset = {
 			race:		currentPreset.race,
@@ -507,14 +554,11 @@ module.exports = function surgeon(mod) {
 				break;
 		}
 
-		// currentPreset = Object.assign({}, preset);
-		
-		
 		if (isNewPreset || !currentNumber) {
 			mod.settings.presets.push(currentPreset);
 			mod.settings.characters[userLoginInfo.name] = mod.settings.presets.length;
 			str = `new preset saved at number ${mod.settings.presets.length}`;
-			mod.settings.presets[currentNumber - 1] = Object.assign({}, preset);
+			mod.settings.presets[currentNumber - 1] = Object.assign({}, preset);	// to prevent modifying previous preset
 		} else {
 			mod.settings.presets[currentNumber - 1] = Object.assign({}, currentPreset);
 			str = `preset ${mod.settings.characters[userLoginInfo.name]} updated`;
@@ -533,7 +577,6 @@ module.exports = function surgeon(mod) {
 			details: Buffer.from(currentPreset.details, 'hex'),
 			shape: Buffer.from(currentPreset.shape, 'hex')
 		};
-		// console.log(e);
 		Object.assign(e, userCostumes);
 		mod.send('S_UNICAST_TRANSFORM_DATA', 5, e);
 		
