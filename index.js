@@ -53,8 +53,7 @@ module.exports = function surgeon(mod) {
 		isLogin = false,
 		allIncomingHook = null,
 		charId,
-		loginMsg = '',
-		currentPreset = {};
+		loginMsg = '';
 
 	mod.hook('S_LOGIN', 12, event => {
 		isLogin = true;
@@ -78,41 +77,17 @@ module.exports = function surgeon(mod) {
 			let preset = Object.assign({}, mod.settings.presets[mod.settings.characters[event.name] - 1]);
 			let template = getTemplate(preset.race, preset.gender, userLoginInfo.job);
 			if (isCorrectTemplate(template)) {
+				event.templateId = template;
+				event.appearance = new Customize(preset.appearance);
+				event.details = Buffer.from(preset.details, 'hex');
+				event.shape = Buffer.from(preset.shape, 'hex');
 				loginMsg = `Current preset - ${mod.settings.characters[event.name]}.`;
-				currentPreset = {
-					race:		preset.race,
-					gender:		preset.gender,
-					template:	template,
-					appearance:	(new Customize(preset.appearance)),
-					details:	preset.details,
-					shape:		preset.shape
-				};
-				event.templateId = currentPreset.template;
-				event.appearance = new Customize(currentPreset.appearance);
-				event.details = Buffer.from(currentPreset.details, 'hex');
-				event.shape = Buffer.from(currentPreset.shape, 'hex');
 				return true;
 			} else {
 				mod.settings.characters[event.name] = 0;
-				currentPreset = {
-					race: 		userLoginInfo.race,
-					gender:		userLoginInfo.gender,
-					template:	userLoginInfo.templateId,
-					appearance:	(new Customize(userLoginInfo.appearance)),
-					details: 	userLoginInfo.details,
-					shape: 		userLoginInfo.shape
-				};
 				loginMsg = `Unable to apply preset ${mod.settings.characters[event.name]} (${presetToString(preset.race, preset.gender)}) to ${jobToString(userLoginInfo.job)}, using original appearance.`;
 			}
 		} else {
-			currentPreset = {
-				race:		userLoginInfo.race,
-				gender: 	userLoginInfo.gender,
-				template:	userLoginInfo.templateId,
-				appearance:	(new Customize(userLoginInfo.appearance)),
-				details:	userLoginInfo.details,
-				shape:		userLoginInfo.shape
-			};
 			loginMsg = 'Original appearance.';
 		}
 	});
@@ -217,13 +192,14 @@ module.exports = function surgeon(mod) {
 	});
 
 	mod.hook('S_UNICAST_TRANSFORM_DATA', 5, event => {
-		if (event.gameId === userLoginInfo.gameId && mod.settings.characters[userLoginInfo.name] && !event.type && !event.isAppear) {
+		if (event.gameId === userLoginInfo.gameId && mod.settings.characters[userLoginInfo.name] && !event.type && !event.isAppear) {	// type = 0 and isAppear = false for ninja's clone jutsu
+			let preset = Object.assign({}, mod.settings.presets[mod.settings.characters[userLoginInfo.name] - 1]);
 			updateUserCostumes(event);
 			marrow = event.isExpandTransform;
-			event.templateId = currentPreset.template;
-			event.appearance = new Customize(currentPreset.appearance);
-			event.details = Buffer.from(currentPreset.details, 'hex');
-			event.shape = Buffer.from(currentPreset.shape, 'hex');
+			event.templateId = getTemplate(preset.race, preset.gender, userLoginInfo.job);
+			event.appearance = new Customize(preset.appearance);
+			event.details = Buffer.from(preset.details, 'hex');
+			event.shape = Buffer.from(preset.shape, 'hex');
 			return true;
 		}
  	});
@@ -233,20 +209,20 @@ module.exports = function surgeon(mod) {
 			updateUserCostumes(event);
 		}
  	});
-	
+
 	mod.hook('S_SPAWN_ME', 'raw', () => {
 		if (isLogin) {
 			mod.command.message(loginMsg);
 			isLogin = false;
 		}
 	});
-	
+
 	function updateUserCostumes(event) {
 		for (let i in keys) {
 			userCostumes[keys[i]] = event[keys[i]];
 		}
 	}
-	
+
 	function surgeonRoom(type, isNewPreset) {
 		newPreset = isNewPreset;
 		let itemId;
@@ -272,7 +248,7 @@ module.exports = function surgeon(mod) {
 				gender: preset.gender,
 				race: preset.race,
 				class: userLoginInfo.job,
-				weapon: (userCostumes.weapon ? userCostumes.weapon : userCostumes.weaponModel),
+				weapon: userCostumes.weapon,
 				chest: userCostumes.body,
 				gloves: userCostumes.hand,
 				boots: userCostumes.feet,
@@ -299,7 +275,6 @@ module.exports = function surgeon(mod) {
 	}
 
 	function getTemplate(race, gender, job) {
-		// return (10101 + (race * 200) + job + (gender == 1 ? 100 : 0));
 		return (10101 + (race * 2 + gender) * 100 + job);
 	}
 
@@ -378,26 +353,26 @@ module.exports = function surgeon(mod) {
 	}
 
 	function applyPreset(num) {
+		let preset = {},
+			template;
 		if (num) {
-			let preset = Object.assign({}, mod.settings.presets[num - 1]);
-			let template = getTemplate(preset.race, preset.gender, userLoginInfo.job);
+			preset = Object.assign({}, mod.settings.presets[num - 1]);
+			template = getTemplate(preset.race, preset.gender, userLoginInfo.job);
 			if (isCorrectTemplate(template)) {		// if chosen preset can be applied to current character
-				// newPreset = num;
 				mod.settings.characters[userLoginInfo.name] = num;
-				currentPreset = Object.assign({}, preset, { template: template });
 			} else {
 				return false;
 			}
-		} else {			
+		} else {
 			mod.settings.characters[userLoginInfo.name] = 0;
-			currentPreset = {
+			preset = {
 				race:		userLoginInfo.race,
 				gender:		userLoginInfo.gender,
-				template:	userLoginInfo.templateId,
 				appearance:	(new Customize(userLoginInfo.appearance)),
 				details:	userLoginInfo.details,
 				shape:		userLoginInfo.shape
 			};
+			template = userLoginInfo.templateId;
 		}
 		let e = {
 			serverId: userLoginInfo.serverId,
@@ -406,11 +381,11 @@ module.exports = function surgeon(mod) {
 			type: 0,
 			isExpandTransform: marrow,
 			isAppear: false,
-			templateId: currentPreset.template,
-			appearance: (new Customize(currentPreset.appearance)),	// no point in this, fake 'S_UNICAST_TRANSFORM_DATA' will contain original appearance anyway (weird bug)
+			templateId: template,
+			appearance: (new Customize(preset.appearance)),
 			appearance2: 100,
-			details: Buffer.from(currentPreset.details, 'hex'),
-			shape: Buffer.from(currentPreset.shape, 'hex')
+			details: Buffer.from(preset.details, 'hex'),
+			shape: Buffer.from(preset.shape, 'hex')
 		};
 		Object.assign(e, userCostumes);
 		mod.send('S_UNICAST_TRANSFORM_DATA', 5, e);
@@ -485,8 +460,8 @@ module.exports = function surgeon(mod) {
 				race:		userLoginInfo.race,
 				gender:		userLoginInfo.gender,
 				appearance:	(new Customize(userLoginInfo.appearance)),
-				details:	userLoginInfo.details.toString('hex'),
-				shape:		userLoginInfo.shape.toString('hex')
+				details:	userLoginInfo.details,
+				shape:		userLoginInfo.shape
 			});
 			mod.command.message(`Preset saved at number ${mod.settings.presets.length}.`);
 		}
@@ -508,59 +483,66 @@ module.exports = function surgeon(mod) {
 		let field = Number(num1),
 			value = Number(num2) - 1,
 			changedField = '',
-			str = '';
-			
-		let currentNumber = mod.settings.characters[userLoginInfo.name];
-		let preset = {
-			race:		currentPreset.race,
-			gender:		currentPreset.gender,
-			template:	currentPreset.template,
-			appearance:	(new Customize(currentPreset.appearance)),
-			details:	currentPreset.details,
-			shape:		currentPreset.shape
-		};
-			
+			str = '',
+			preset = {},
+			currentNumber;
+
+		currentNumber = mod.settings.characters[userLoginInfo.name];
+		if (currentNumber) {
+			preset = Object.assign({}, mod.settings.presets[currentNumber - 1]);
+			preset.appearance = new Customize(mod.settings.presets[currentNumber - 1].appearance);
+			newPreset = isNewPreset;
+		} else {
+			preset = {
+				race:		userLoginInfo.race,
+				gender:		userLoginInfo.gender,
+				appearance:	(new Customize(userLoginInfo.appearance)),
+				details:	userLoginInfo.details,
+				shape:		userLoginInfo.shape
+			};
+			newPreset = true;
+		}
+
 		switch (field) {
 			case 0:		// dunno what's this
-				currentPreset.appearance.unk = value;
+				preset.appearance.unk = value;
 				break;
 			case 1:
-				currentPreset.appearance.skinColor = value;
+				preset.appearance.skinColor = value;
 				changedField = 'Skin color';
 				break;
 			case 2:
-				currentPreset.appearance.faceStyle = value;
+				preset.appearance.faceStyle = value;
 				changedField = 'Face type';
 				break;
 			case 3:
-				currentPreset.appearance.faceDecal = value;
+				preset.appearance.faceDecal = value;
 				changedField = 'Face decal';
 				break;
 			case 4:
-				currentPreset.appearance.hairStyle = value;
+				preset.appearance.hairStyle = value;
 				changedField = 'Hairstyle';
 				break;
 			case 5:
-				currentPreset.appearance.hairColor = value;
+				preset.appearance.hairColor = value;
 				changedField = 'Hair color';
 				break;
 			case 6:
-				currentPreset.appearance.voice = value;
+				preset.appearance.voice = value;
 				changedField = 'Voice';
 				break;
 			case 7:
-				currentPreset.appearance.tattoos = value;
+				preset.appearance.tattoos = value;
 				changedField = 'Tattoos';
 				break;
 		}
 
-		if (isNewPreset || !currentNumber) {
-			mod.settings.presets.push(currentPreset);
+		if (newPreset) {
+			mod.settings.presets.push(preset);
 			mod.settings.characters[userLoginInfo.name] = mod.settings.presets.length;
 			str = `new preset saved at number ${mod.settings.presets.length}`;
-			mod.settings.presets[currentNumber - 1] = Object.assign({}, preset);	// to prevent modifying previous preset
 		} else {
-			mod.settings.presets[currentNumber - 1] = Object.assign({}, currentPreset);
+			mod.settings.presets[currentNumber - 1] = Object.assign({}, preset);
 			str = `preset ${mod.settings.characters[userLoginInfo.name]} updated`;
 		}
 
@@ -571,15 +553,14 @@ module.exports = function surgeon(mod) {
 			type: 0,
 			isExpandTransform: marrow,
 			isAppear: false,
-			templateId: currentPreset.template,
-			appearance: (new Customize(currentPreset.appearance)),
+			templateId: getTemplate(preset.race, preset.gender, userLoginInfo.job),
+			appearance: (new Customize(preset.appearance)),
 			appearance2: 100,
-			details: Buffer.from(currentPreset.details, 'hex'),
-			shape: Buffer.from(currentPreset.shape, 'hex')
+			details: Buffer.from(preset.details, 'hex'),
+			shape: Buffer.from(preset.shape, 'hex')
 		};
 		Object.assign(e, userCostumes);
 		mod.send('S_UNICAST_TRANSFORM_DATA', 5, e);
-		
 		mod.command.message(`${changedField} changed to ${value + 1}, ${str}.`);
 	}
 
