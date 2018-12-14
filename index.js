@@ -226,7 +226,18 @@ module.exports = function surgeon(mod) {
 	function surgeonRoom(type, isNewPreset) {
 		newPreset = isNewPreset;
 		let itemId;
-		let preset = Object.assign({}, mod.settings.presets[mod.settings.characters[userLoginInfo.name] - 1]);
+		let preset = {};
+		if (mod.settings.characters[userLoginInfo.name]) {
+			preset = Object.assign({}, mod.settings.presets[mod.settings.characters[userLoginInfo.name] - 1]);
+		} else {
+			preset = {
+				race:		userLoginInfo.race,
+				gender:		userLoginInfo.gender,
+				appearance:	(new Customize(userLoginInfo.appearance)),
+				details:	userLoginInfo.details,
+				shape:		userLoginInfo.shape
+			};
+		}
 		switch (type) {
 			case 1: itemId = 168011; break;	// race
 			case 2: itemId = 168012; break;	// gender
