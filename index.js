@@ -311,19 +311,19 @@ module.exports = function surgeon(mod) {
 		let str = '';
 		switch (race) {
 			case 0:
-				str = 'Human ' + (gender == 0 ? 'female' : 'male');
+				str = 'Human ' + (gender ? 'female' : 'male');
 				break;
 			case 1:
-				str = 'High Elf ' + (gender == 0 ? 'female' : 'male');
+				str = 'High Elf ' + (gender ? 'female' : 'male');
 				break;
 			case 2:
-				str = 'Aman ' + (gender == 0 ? 'female' : 'male');
+				str = 'Aman ' + (gender ? 'female' : 'male');
 				break;
 			case 3:
-				str = 'Castanic ' + (gender == 0 ? 'female' : 'male');
+				str = 'Castanic ' + (gender ? 'female' : 'male');
 				break;
 			case 4:
-				str = (gender == 0 ? 'Popori' : 'Elin');
+				str = (gender ? 'Popori' : 'Elin');
 				break;
 			case 5:
 				str = 'Baraka';
