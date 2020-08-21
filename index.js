@@ -55,7 +55,7 @@ module.exports = function surgeon(mod) {
 		charId,
 		loginMsg = '';
 
-	mod.hook('S_LOGIN', 12, event => {
+	mod.hook('S_LOGIN', 14,  event => {
 		isLogin = true;
 		marrow = false;
 		inSurgeonRoom = false;
@@ -92,7 +92,7 @@ module.exports = function surgeon(mod) {
 		}
 	});
 
-	mod.hook('S_GET_USER_LIST', 15, { order: 1 }, event => {
+	mod.hook('S_GET_USER_LIST', 18, { order: 1 }, event => {
 		if (inSurgeonRoom) {
 			if (allIncomingHook) mod.unhook(allIncomingHook);
 			event.characters.forEach(character => {
@@ -139,7 +139,7 @@ module.exports = function surgeon(mod) {
 				mod.send('C_SELECT_USER', 1, { id: charId, unk: 0 });
 				charId = null;
 			} else {
-				mod.hookOnce('S_GET_USER_LIST', 14, { order: 0 }, event => {
+				mod.hookOnce('S_GET_USER_LIST', 18, { order: 0 }, event => {
 					if (allIncomingHook) mod.unhook(allIncomingHook);
 					event.characters.forEach(character => {
 						if (character.name === userLoginInfo.name) charId = character.id;
@@ -177,7 +177,7 @@ module.exports = function surgeon(mod) {
 				charId = null;
 			}
 			else {
-				mod.hookOnce('S_GET_USER_LIST', 14, { order: 0 }, event => {
+				mod.hookOnce('S_GET_USER_LIST', 18, { order: 0 }, event => {
 					if (allIncomingHook) mod.unhook(allIncomingHook);
 					event.characters.forEach(character => {
 						if (character.name === userLoginInfo.name) charId = character.id;
@@ -191,7 +191,7 @@ module.exports = function surgeon(mod) {
 		}
 	});
 
-	mod.hook('S_UNICAST_TRANSFORM_DATA', 5, event => {
+	mod.hook('S_UNICAST_TRANSFORM_DATA', 6, event => {
 		if (event.gameId === userLoginInfo.gameId && mod.settings.characters[userLoginInfo.name] && !event.type && !event.isAppear) {	// type = 0 and isAppear = false for ninja's clone jutsu
 			let preset = Object.assign({}, mod.settings.presets[mod.settings.characters[userLoginInfo.name] - 1]);
 			updateUserCostumes(event);
@@ -399,7 +399,7 @@ module.exports = function surgeon(mod) {
 			shape: Buffer.from(preset.shape, 'hex')
 		};
 		Object.assign(e, userCostumes);
-		mod.send('S_UNICAST_TRANSFORM_DATA', 5, e);
+		mod.send('S_UNICAST_TRANSFORM_DATA', 6, e);
 		return true;
 	}
 
@@ -571,7 +571,7 @@ module.exports = function surgeon(mod) {
 			shape: Buffer.from(preset.shape, 'hex')
 		};
 		Object.assign(e, userCostumes);
-		mod.send('S_UNICAST_TRANSFORM_DATA', 5, e);
+		mod.send('S_UNICAST_TRANSFORM_DATA', 6, e);
 		mod.command.message(`${changedField} changed to ${value + 1}, ${str}.`);
 	}
 
